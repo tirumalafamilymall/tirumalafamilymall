@@ -48,9 +48,9 @@ export default function Footer() {
               {[
                 ['Home', '/'],
                 ['Shop', '/shop'],
-                ['Women', '/shop/women'],
-                ['Men', '/shop/men'],
-                ['Kids', '/shop/kids'],
+                ['Women', '/collections/women'],
+                ['Men', '/collections/men'],
+                ['Kids', '/collections/kids'],
                 ['About', '/about'],
                 ['Contact', '/contact'],
               ].map(([l, h]) => (

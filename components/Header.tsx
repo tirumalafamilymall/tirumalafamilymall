@@ -139,24 +139,28 @@ export default function Header() {
   />
 
   {/* DRAWER */}
-  <div
-    className={`fixed inset-0 w-[85%] max-w-[320px] bg-white z-[999] p-6 h-[93dvh] 
-    transition-transform duration-300 ease-in-out
-    ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
-  >
+<div
+  className={`fixed inset-0 w-[85%] max-w-[320px] 
+  bg-white z-[999] p-6 h-[100dvh]
+  shadow-[20px_0_60px_rgba(0,0,0,0.12)]
+  transition-transform duration-300 ease-out
+  ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+>
 
     {/* TOP */}
     <div className="flex items-center justify-between mb-8">
 
-      <div>
-        <img src="/logo1.png" className="h-[40px]" />
-        <span className="text-[12px] tracking-[0.4em] font-semibold uppercase">
-          Tirumala
-        </span>
-        <p className="text-[10px] tracking-[0.4em] text-[#CC0000] mt-1">
-          FAMILY MALL
-        </p>
-      </div>
+    <div className="mb-10 border-b border-[#f1f1f1] pb-6">
+  <img src="/logo1.png" className="h-[42px] mb-2" />
+
+  <span className="text-[13px] tracking-[0.35em] font-semibold uppercase">
+    Tirumala
+  </span>
+
+  <p className="text-[10px] tracking-[0.4em] text-[#8b1e1e] mt-1">
+    FAMILY MALL
+  </p>
+</div>
 
       <button
         onClick={() => setMenuOpen(false)}
@@ -168,30 +172,46 @@ export default function Header() {
     </div>
 
     {/* MENU */}
-    <nav className="flex flex-col gap-6 text-[15px] font-medium">
+<nav className="flex flex-col gap-5 text-[15px] font-medium">
 
-      <Link href="/" onClick={() => setMenuOpen(false)}>Home</Link>
-      <Link href="/collections/women" onClick={() => setMenuOpen(false)}>Women</Link>
-      <Link href="/collections/men" onClick={() => setMenuOpen(false)}>Men</Link>
-      <Link href="/collections/kids" onClick={() => setMenuOpen(false)}>Kids</Link>
-<Link href="/collections/insta-live" onClick={() => setMenuOpen(false)}>
-  Insta Live
-</Link>
-      <Link
-        href="/collections/sale"
-        className="text-[#CC0000] font-semibold"
-        onClick={() => setMenuOpen(false)}
-      >
-        Sale
-      </Link>
+{[
+  { name: 'Home', link: '/' },
+  { name: 'Women', link: '/collections/women' },
+  { name: 'Men', link: '/collections/men' },
+  { name: 'Kids', link: '/collections/kids' },
+  { name: 'Insta Live', link: '/collections/insta-live' },
 
-    </nav>
+  // 🔥 NEW (Brand Pages)
+  { name: 'About Us', link: '/about' },
+  { name: 'Contact', link: '/contact' },
+
+].map((item) => (
+    <Link
+      key={item.name}
+      href={item.link}
+      onClick={() => setMenuOpen(false)}
+      className="flex items-center justify-between py-2 border-b border-transparent hover:border-[#f1f1f1] transition"
+    >
+      <span className="tracking-wide">{item.name}</span>
+      <span className="text-gray-300 text-sm">→</span>
+    </Link>
+  ))}
+
+  <Link
+    href="/collections/sale"
+    onClick={() => setMenuOpen(false)}
+    className="mt-2 text-[#8b1e1e] font-semibold tracking-wide"
+  >
+    Sale
+  </Link>
+
+</nav>
 
     {/* CTA */}
     <div className="absolute bottom-6 left-6 right-6">
       <Link
         href="/collections/new"
-        className="block text-center py-3 rounded-full bg-black text-white text-[12px] tracking-[0.2em] uppercase"
+        className="block text-center py-3 rounded-full bg-[#8b1e1e] hover:bg-[#a83232] text-white text-[12px] tracking-[0.25em] uppercase"
       >
         Shop New Arrivals
       </Link>

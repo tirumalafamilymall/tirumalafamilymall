@@ -7,27 +7,20 @@ export default function AboutPage() {
     <main className="bg-white text-[#111] overflow-hidden">
 
       {/* 🔥 HERO (UPGRADED) */}
-<section className="relative h-[55vh] md:h-[60vh] flex items-center justify-center text-center">
+{/* 🔥 BALANCED HERO (MATCHES SITE) */}
+<section className="py-24 bg-[#fafafa] text-center px-6">
 
-  {/* IMAGE */}
-  <div className="absolute inset-0">
-    <img
-      src="https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=1200&q=80"
-      className="w-full h-full object-cover"
-    />
-    <div className="absolute inset-0 bg-black/50" />
-  </div>
+  <p className="text-xs tracking-[4px] uppercase text-[#CC0000] mb-3">
+    About Us
+  </p>
 
-  {/* CONTENT */}
-  <div className="relative z-10 max-w-2xl px-6">
-    <h1 className="heading-serif text-4xl md:text-5xl italic text-white leading-tight">
-      A New Standard of Fashion
-    </h1>
+  <h1 className="heading-serif text-5xl italic mb-4">
+    Tirumala Family Mall
+  </h1>
 
-    <p className="mt-4 text-sm text-gray-200">
-      Premium fashion for every generation
-    </p>
-  </div>
+  <p className="text-gray-500 text-sm max-w-md mx-auto">
+    Premium fashion for every generation, blending tradition with modern style.
+  </p>
 
 </section>
 
@@ -116,17 +109,17 @@ export default function AboutPage() {
       {
         img: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&q=80",
         title: "Women Collection",
-        link: "/shop/women",
+        link: "/collections/women",
       },
       {
         img: "https://images.unsplash.com/photo-1583391733956-6c77a90c2c59?w=600&q=80",
         title: "Men Collection",
-        link: "/shop/men",
+        link: "/collections/men",
       },
       {
         img: "https://images.unsplash.com/photo-1622339442030-9c0cdbaff342?w=600&q=80",
         title: "Kids Collection",
-        link: "/shop/kids",
+        link: "/collections/kids",
       },
     ].map((item, i) => (
       <Link key={i} href={item.link} className="group block">

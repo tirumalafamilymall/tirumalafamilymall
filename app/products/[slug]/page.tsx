@@ -71,7 +71,7 @@ export default function ProductPage() {
   const [size, setSize] = useState<string | null>(null)
   const [qty, setQty] = useState(1)
   const [imgIdx, setImgIdx] = useState(0)
-  const [openQ, setOpenQ] = useState<string | null>('Description')
+  const [openQ, setOpenQ] = useState<string | null>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
 
@@ -86,7 +86,7 @@ const params = useParams()
 const productId = params.id as string
 
 const [recent, setRecent] = useState<Product[]>([])
-
+const [showShare, setShowShare] = useState(false)
 const product: Product = {
   id: productId,
   name: 'Silk Blend Designer Saree',
@@ -137,6 +137,7 @@ const currentImages =
     : IMAGES
 
   return (
+    <>
   <div className="bg-white min-h-screen pb-20 lg:pb-0 overflow-x-hidden">
 
       {/* BREADCRUMB */}
@@ -221,9 +222,21 @@ const currentImages =
           {/* PRODUCT INFO */}
           <div className="bg-[#fafafa] rounded-2xl p-6 lg:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] sticky top-[100px]">
 
-            <h1 className="heading-serif text-[28px] md:text-[34px] tracking-[0.04em]">
-              Silk Blend Designer Saree
-            </h1>
+          
+
+            <div className="flex items-start justify-between gap-4">
+  <h1 className="heading-serif text-[28px] md:text-[34px] tracking-[0.04em]">
+    {product.name}
+  </h1>
+
+  {/* SHARE */}
+<button
+  onClick={() => setShowShare(true)}
+  className="w-10 h-10 rounded-full bg-black text-white flex items-center justify-center"
+>
+  <Share2 size={16} />
+</button>
+</div>
 
             <div className="flex items-center gap-2 mt-3">
               {[1,2,3,4,5].map(i => (
@@ -274,7 +287,19 @@ const currentImages =
 
             {/* SIZE */}
             <div className="mt-6">
-              <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3">Select Size</p>
+             <div className="flex items-center justify-between mb-3">
+  <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500">
+    Select Size
+  </p>
+
+  {/* SIZE GUIDE BUTTON */}
+  <button
+    onClick={() => setOpenQ('size-guide')}
+    className="text-[11px] text-[#cc0000] hover:underline tracking-wide"
+  >
+    Size Guide
+  </button>
+</div>
               <div className="flex gap-3 flex-wrap">
                 {sizes.map(s => (
                   <button
@@ -313,10 +338,13 @@ const currentImages =
 
     setSizeError(false)
 
-    addItem({
-      ...product,
-      size,
-    })
+addItem({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  image: product.image,
+  size,
+})
 
     openCart()
 
@@ -339,10 +367,13 @@ const currentImages =
 
   setSizeError(false)
 
-  addItem({
-    ...product,
-    size,
-  })
+addItem({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  image: product.image,
+  size,
+})
 
   
 
@@ -530,10 +561,13 @@ const currentImages =
         return
       }
 
-      addItem({
-        ...product,
-        size,
-      })
+addItem({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  image: product.image,
+  size,
+})
 
       openCart()
     }}
@@ -549,10 +583,13 @@ const currentImages =
         return
       }
 
-      addItem({
-        ...product,
-        size,
-      })
+addItem({
+  id: product.id,
+  name: product.name,
+  price: product.price,
+  image: product.image,
+  size,
+})
 
       router.push('/checkout')
     }}
@@ -563,5 +600,117 @@ const currentImages =
 </div>
 
     </div>
+    {showShare && (
+  <div
+    className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center"
+    onClick={() => setShowShare(false)}
+  >
+    <div
+      className="bg-white w-full md:max-w-md rounded-t-2xl md:rounded-2xl p-6 animate-[fadeIn_.3s_ease]"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h3 className="heading-serif italic text-[22px] mb-5 text-center">
+        Share Product
+      </h3>
+
+      <div className="grid grid-cols-4 gap-4 text-center">
+
+        {/* WhatsApp */}
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(window.location.href)}`}
+          target="_blank"
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="w-12 h-12 rounded-full bg-green-500 text-white flex items-center justify-center">
+            W
+          </div>
+          <span className="text-xs">WhatsApp</span>
+        </a>
+
+        {/* Facebook */}
+        <a
+          href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`}
+          target="_blank"
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center">
+            f
+          </div>
+          <span className="text-xs">Facebook</span>
+        </a>
+
+        {/* Telegram */}
+        <a
+          href={`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}`}
+          target="_blank"
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="w-12 h-12 rounded-full bg-sky-500 text-white flex items-center justify-center">
+            T
+          </div>
+          <span className="text-xs">Telegram</span>
+        </a>
+
+        {/* Copy */}
+        <button
+          onClick={() => {
+            navigator.clipboard.writeText(window.location.href)
+            alert('Link copied!')
+          }}
+          className="flex flex-col items-center gap-2"
+        >
+          <div className="w-12 h-12 rounded-full bg-gray-800 text-white flex items-center justify-center">
+            🔗
+          </div>
+          <span className="text-xs">Copy</span>
+        </button>
+
+      </div>
+    </div>
+  </div>
+)}
+
+    {openQ === 'size-guide' && (
+  <div className="fixed inset-0 z-[999] bg-black/40 backdrop-blur-sm flex items-center justify-center">
+    
+    <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-[0_30px_80px_rgba(0,0,0,0.2)]">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-5">
+        <h3 className="heading-serif italic text-[20px]">
+          Size Guide
+        </h3>
+
+        <button onClick={() => setOpenQ(null)}>✕</button>
+      </div>
+
+      {/* TABLE */}
+      <div className="text-[13px] text-gray-600 space-y-3">
+
+        <div className="flex justify-between border-b pb-2">
+          <span>Size</span>
+          <span>Bust (inches)</span>
+        </div>
+
+        {[
+          ['XS', '32'],
+          ['S', '34'],
+          ['M', '36'],
+          ['L', '38'],
+          ['XL', '40'],
+          ['XXL', '42'],
+        ].map(([s, val]) => (
+          <div key={s} className="flex justify-between">
+            <span>{s}</span>
+            <span>{val}</span>
+          </div>
+        ))}
+
+      </div>
+
+    </div>
+  </div>
+)}
+</>
   )
 }

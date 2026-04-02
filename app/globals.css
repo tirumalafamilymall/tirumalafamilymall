@@ -17,7 +17,9 @@ body {
   background: #ffffff;
   color: #111;
 }
-
+* {
+  -webkit-tap-highlight-color: transparent;
+}
 /* 🔥 DESIGN SYSTEM */
 :root {
   --primary: #CC0000;
