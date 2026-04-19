@@ -30,7 +30,7 @@ export default function Header() {
               {/* MOBILE MENU */}
               <button
                 onClick={() => setMenuOpen(true)}
-                className="lg:hidden translate-x-[3px] w-[40px] h-[40px] flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition"
+                className="lg:hidden translate-x-[3px] w-[40px] h-[40px] flex items-center justify-center rounded-full bg-white shadow-md border border-[#eee] hover:bg-gray-200 transition"
               >
                 <div className="grid grid-cols-3 gap-[3px]">
                   {[...Array(9)].map((_, i) => (
@@ -140,31 +140,37 @@ export default function Header() {
 
   {/* DRAWER */}
 <div
-  className={`fixed inset-0 w-[85%] max-w-[320px] 
-  bg-white z-[999] p-6 h-[100dvh]
-  shadow-[20px_0_60px_rgba(0,0,0,0.12)]
+  className={`fixed inset-0 w-[88%] max-w-[340px] 
+  bg-gradient-to-b from-white via-[#fafafa] to-white
+  z-[999] px-6 pt-6 pb-28 h-[100dvh]
+  shadow-[30px_0_80px_rgba(0,0,0,0.15)]
   transition-transform duration-300 ease-out
   ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
 >
 
     {/* TOP */}
-    <div className="flex items-center justify-between mb-8">
+    <div className="flex items-start text-left justify-between mb-8">
 
-    <div className="mb-10 border-b border-[#f1f1f1] pb-6">
-  <img src="/logo1.png" className="h-[42px] mb-2" />
+<div className="flex flex-col items-center leading-tight">
 
-  <span className="text-[13px] tracking-[0.35em] font-semibold uppercase">
+  {/* ICON */}
+  <img src="/logo1.png" className="h-[40px] lg:h-[50px] mb-1" />
+
+  {/* BRAND NAME */}
+  <h1 className="text-[18px] lg:text-[22px] font-semibold uppercase tracking-[0.12em] text-black">
     Tirumala
-  </span>
+  </h1>
 
-  <p className="text-[10px] tracking-[0.4em] text-[#8b1e1e] mt-1">
-    FAMILY MALL
+  {/* SUBTEXT */}
+  <p className="text-[10px] tracking-[0.25em] text-[#8b1e1e] uppercase mt-[2px]">
+    Family Mall
   </p>
+
 </div>
 
       <button
         onClick={() => setMenuOpen(false)}
-        className="w-[36px] h-[36px] rounded-full bg-gray-100 flex items-center justify-center"
+        className="w-[36px] h-[36px] rounded-full bg-white border border-[#eee] shadow-sm flex items-center justify-center"
       >
         <X size={18} />
       </button>
@@ -172,50 +178,72 @@ export default function Header() {
     </div>
 
     {/* MENU */}
-<nav className="flex flex-col gap-5 text-[15px] font-medium">
+<nav className="flex flex-col mt-6">
 
-{[
-  { name: 'Home', link: '/' },
-  { name: 'Women', link: '/collections/women' },
-  { name: 'Men', link: '/collections/men' },
-  { name: 'Kids', link: '/collections/kids' },
-  { name: 'Insta Live', link: '/collections/insta-live' },
-
-  // 🔥 NEW (Brand Pages)
-  { name: 'About Us', link: '/about' },
-  { name: 'Contact', link: '/contact' },
-
-].map((item) => (
+  {[
+    'Home',
+    'Women',
+    'Men',
+    'Kids',
+    'Insta Live'
+  ].map((item, i) => (
     <Link
-      key={item.name}
-      href={item.link}
+      key={item}
+      href={item === 'Home' ? '/' : `/collections/${item.toLowerCase().replace(' ', '-')}`}
       onClick={() => setMenuOpen(false)}
-      className="flex items-center justify-between py-2 border-b border-transparent hover:border-[#f1f1f1] transition"
+      className="group py-3 flex items-center justify-between border-b border-[#f5f5f5]"
     >
-      <span className="tracking-wide">{item.name}</span>
-      <span className="text-gray-300 text-sm">→</span>
+      <span className="text-[18px] font-medium text-black group-hover:tracking-wide transition-all duration-300">
+        {item}
+      </span>
+
+      <span className="text-gray-300 group-hover:text-black group-hover:translate-x-1 transition">
+        →
+      </span>
     </Link>
   ))}
 
+  {/* DIVIDER */}
+  <div className="my-4 border-t border-[#eee]" />
+
+  {/* SMALL LINKS */}
+  <div className="flex flex-col gap-3">
+    <Link href="/about" className="text-[14px] text-gray-500 hover:text-black transition">
+      About Us
+    </Link>
+
+    <Link href="/contact" className="text-[14px] text-gray-500 hover:text-black transition">
+      Contact
+    </Link>
+  </div>
+
+  {/* SALE */}
   <Link
     href="/collections/sale"
-    onClick={() => setMenuOpen(false)}
-    className="mt-2 text-[#8b1e1e] font-semibold tracking-wide"
+    className="text-[16px] text-[#8b1e1e] font-semibold mt-5"
   >
     Sale
   </Link>
 
 </nav>
 
+
     {/* CTA */}
-    <div className="absolute bottom-6 left-6 right-6">
-      <Link
-        href="/collections/new"
-        className="block text-center py-3 rounded-full bg-[#8b1e1e] hover:bg-[#a83232] text-white text-[12px] tracking-[0.25em] uppercase"
-      >
-        Shop New Arrivals
-      </Link>
-    </div>
+<div className="absolute bottom-6 left-6 right-6">
+
+  <Link
+    href="/collections/new"
+    className="block text-center py-4 rounded-full 
+    bg-[#8b1e1e] 
+    hover:bg-[#a83232]
+    text-white text-[12px] tracking-[0.3em] uppercase
+    shadow-[0_8px_25px_rgba(139,30,30,0.25)]
+    transition-all duration-300"
+  >
+    Shop New Arrivals
+  </Link>
+
+</div>
 
   </div>
 </>
