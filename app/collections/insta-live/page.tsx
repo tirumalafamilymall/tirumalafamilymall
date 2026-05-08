@@ -1,26 +1,47 @@
 'use client'
 
-import { Instagram, Play } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Instagram, Play, Loader2 } from 'lucide-react'
 import ProductCard, { Product } from '@/components/ProductCard'
+import { getInstaLivePosts } from '@/lib/api'
 
-const IMAGES = [
-  'https://images.unsplash.com/photo-1520975922284-7b06c0f3c8e3?w=500',
-  'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=500',
-  'https://images.unsplash.com/photo-1521334884684-d80222895322?w=500',
-  'https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=500',
-]
-
-const PRODUCTS: Product[] = Array.from({ length: 12 }, (_, i) => ({
-  id: `il${i}`,
-  name: `Insta Live Special ${i + 1}`,
-  price: 699 + i * 100,
-  originalPrice: i % 2 === 0 ? 699 + i * 100 + 250 : undefined,
-  image: IMAGES[i % IMAGES.length],
-  href: `/products/insta-${i}`,
-  badge: i < 3 ? 'Live' : undefined,
-}))
+function toCardProduct(p: any): Product {
+  return {
+    id:            p.slug || p.id,
+    name:          p.name,
+    price:         p.base_price ?? p.price,
+    originalPrice: p.original_price ?? undefined,
+    image:         p.images?.[0] || '',
+    href:          `/products/${p.slug || p.id}`,
+    badge:         undefined,
+  }
+}
 
 export default function InstaLivePage() {
+  const [posts,   setPosts]   = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error,   setError]   = useState('')
+
+  // Flatten all products from all active posts, deduplicated
+  const products: Product[] = []
+  const seen = new Set<string>()
+  for (const post of posts) {
+    for (const lp of post.products ?? []) {
+      const p = lp.product ?? lp
+      if (!seen.has(p.id)) {
+        seen.add(p.id)
+        products.push(toCardProduct(p))
+      }
+    }
+  }
+
+  useEffect(() => {
+    getInstaLivePosts(true)
+      .then(res => setPosts(res.posts ?? res ?? []))
+      .catch(() => setError('Failed to load products'))
+      .finally(() => setLoading(false))
+  }, [])
+
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-gray-100 py-3">
@@ -30,6 +51,7 @@ export default function InstaLivePage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 lg:py-12">
+
         {/* Header */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-red-50 px-4 py-2 rounded-full mb-4">
@@ -61,15 +83,22 @@ export default function InstaLivePage() {
         </a>
 
         {/* Products */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {PRODUCTS.map(p => <ProductCard key={p.id} product={p} />)}
-        </div>
+        {loading ? (
+          <div className="flex justify-center py-24">
+            <Loader2 size={28} className="animate-spin text-gray-300" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-24 text-gray-400 text-sm">{error}</div>
+        ) : products.length === 0 ? (
+          <div className="text-center py-24 text-gray-400 text-sm">
+            No products yet — check back after the next live session!
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+            {products.map(p => <ProductCard key={p.id} product={p} />)}
+          </div>
+        )}
 
-        <div className="text-center mt-10">
-          <button className="px-10 py-3 border border-gray-200 text-sm tracking-[0.1em] uppercase text-gray-600 hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-300">
-            Load More
-          </button>
-        </div>
       </div>
     </div>
   )

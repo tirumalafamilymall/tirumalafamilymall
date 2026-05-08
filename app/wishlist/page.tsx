@@ -49,15 +49,20 @@ export default function WishlistPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
           {items.map((item, i) => (
             <div key={item.id} className="group relative">
-              <Link href={item.href}
-                className="block aspect-[3/4] rounded-xl overflow-hidden mb-3 flex items-center justify-center"
-                style={{ background: PLACEHOLDER_COLORS[i % 6] }}
-              >
-                <span className="text-6xl opacity-20 group-hover:scale-105 transition-transform duration-300 block">👗</span>
-              </Link>
+// Change the Link inside wishlist map to:
+<Link href={item.href}
+  className="block aspect-[3/4] rounded-xl overflow-hidden mb-3"
+  style={{ background: PLACEHOLDER_COLORS[i % 6] }}
+>
+  {item.image ? (
+    <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+  ) : (
+    <span className="text-6xl opacity-20 group-hover:scale-105 transition-transform duration-300 flex items-center justify-center h-full">👗</span>
+  )}
+</Link>
 
               {/* Remove */}
-              <button onClick={() => toggle(item)}
+              <button onClick={() => void toggle(item)}
                 className="absolute top-2 right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-sm hover:bg-red-50 transition-colors border border-gray-100"
               >
                 <X size={12} className="text-gray-400 hover:text-red-500" />

@@ -53,7 +53,7 @@ export default function CartPage() {
               <div key={`${item.id}-${item.size}`}
                 className="flex gap-4 p-4 border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors"
               >
-                <Link href={`/products/${item.id}`}
+                <Link href={`/products/${item.productId}`}
                   className="w-20 h-24 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
                   style={{ background: PLACEHOLDER_COLORS[i % 4] }}
                 >
@@ -61,7 +61,7 @@ export default function CartPage() {
                 </Link>
 
                 <div className="flex-1 min-w-0">
-                  <Link href={`/products/${item.id}`} className="text-[13.5px] font-medium text-gray-800 hover:text-gray-900 transition-colors block leading-snug mb-1">
+                  <Link href={`/products/${item.productId}`} className="text-[13.5px] font-medium text-gray-800 hover:text-gray-900 transition-colors block leading-snug mb-1">
                     {item.name}
                   </Link>
                   {item.size && <p className="text-[11.5px] text-gray-400 mb-1.5">Size: {item.size}</p>}

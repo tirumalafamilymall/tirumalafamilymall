@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { SlidersHorizontal, ChevronDown, X, Grid, LayoutGrid } from 'lucide-react'
+import { SlidersHorizontal, ChevronDown, X, Grid, LayoutGrid, Loader2 } from 'lucide-react'
 import ProductCard, { Product } from '@/components/ProductCard'
+import { getProducts } from '@/lib/api'
 
 const LABELS: Record<string, string> = {
   women: 'Women', men: 'Men', kids: 'Kids', sarees: 'Sarees', kurtis: 'Kurtis & Kurtas',
@@ -20,32 +21,108 @@ const LABELS: Record<string, string> = {
   all: 'All Products',
 }
 
-const PRICE_RANGES = ['Under ₹500', '₹500 – ₹1,000', '₹1,000 – ₹1,500', 'Above ₹1,500']
-const SORT_OPTIONS = ['Newest First', 'Price: Low to High', 'Price: High to Low', 'Best Selling', 'Name A–Z']
+// Map slug → backend category name
+const SLUG_TO_CATEGORY: Record<string, string> = {
+  women: 'Women', men: 'Men', kids: 'Kids', sarees: 'Sarees',
+  kurtis: 'Kurtis', 'dress-materials': 'Dress Materials',
+  '3-piece': '3 Piece Sets', '2-piece': '2 Piece Sets',
+  frocks: 'Frocks', nightwear: 'Nightwear', leggings: 'Leggings',
+  tops: 'Tops', shirts: 'Shirts', 'men-kurtas': 'Ethnic Kurtas',
+  'jeans-men': 'Jeans', trousers: 'Trousers', blazers: 'Blazers',
+  sherwani: 'Sherwani', ramraj: 'Ramraj', 'jeans-women': 'Jeans',
+  coord: 'Coord Sets', plazo: 'Plazo', innerwear: 'Innerwear',
+  blouses: 'Blouses', 'girls-frocks': 'Girls Frocks',
+  'girls-lehenga': 'Girls Lehenga', 'girls-kurtas': 'Girls Kurtas',
+  'girls-dresses': 'Girls Dresses', 'boys-kurtas': 'Boys Kurtas',
+  'boys-sherwani': 'Boys Sherwani', 'boys-tshirts': 'Boys T-Shirts',
+  'boys-bottoms': 'Boys Bottoms', anarkali: 'Anarkali', lehenga: 'Lehenga',
+  'half-sarees': 'Half Sarees', sale: 'Sale',
+}
 
-const PRODUCTS: Product[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `p${i}`,
-  name: ['Silk Blend Saree', 'Printed Kurti Set', 'Cotton Anarkali', '3 Piece Coord Set', 'Palazzo Kurti Combo', 'Embroidered Suit', 'Georgette Saree', 'Long Frock Design', 'Nightie Full Length', 'Western Crop Top', 'Lehenga Choli Set', 'Dress Material', 'Nightwear Set', 'Kurti with Belt', 'Straight Fit Kurti', 'Half Saree Set'][i],
-  price: [1299, 699, 999, 1049, 849, 1199, 1099, 649, 449, 499, 1499, 549, 399, 779, 599, 1699][i],
-  originalPrice: i % 3 === 0 ? [1299, 699, 999, 1049, 849, 1199, 1099, 649, 449, 499, 1499, 549, 399, 779, 599, 1699][i] + 250 : undefined,
-  image: '',
-  href: `/products/product-${i}`,
-  badge: i === 0 ? 'New' : i === 2 ? 'Trending' : i === 5 ? 'Popular' : undefined,
-}))
+const SORT_OPTIONS = [
+  { label: 'Newest First',        value: 'newest' },
+  { label: 'Price: Low to High',  value: 'price_asc' },
+  { label: 'Price: High to Low',  value: 'price_desc' },
+]
+
+const PRICE_RANGES = [
+  { label: 'Under ₹500',        min: 0,    max: 499  },
+  { label: '₹500 – ₹1,000',    min: 500,  max: 1000 },
+  { label: '₹1,000 – ₹1,500',  min: 1000, max: 1500 },
+  { label: 'Above ₹1,500',      min: 1500, max: 99999 },
+]
+
+// Map backend product → ProductCard shape
+function toCardProduct(p: any): Product {
+  return {
+    id:            p.slug || p.id,
+    name:          p.name,
+    price:         p.base_price,
+    image:         p.images?.[0] || '',
+    href:          `/products/${p.slug || p.id}`,
+    badge:         p.stock === 0 ? 'Sold Out' : undefined,
+  }
+}
 
 export default function CollectionPage() {
   const params = useParams()
   const slug   = (params?.slug as string) ?? 'all'
   const label  = LABELS[slug] ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 
-  const [sort,        setSort]        = useState('Newest First')
-  const [prices,      setPrices]      = useState<string[]>([])
+  const [products,     setProducts]     = useState<Product[]>([])
+  const [total,        setTotal]        = useState(0)
+  const [page,         setPage]         = useState(1)
+  const [loading,      setLoading]      = useState(true)
+  const [loadingMore,  setLoadingMore]  = useState(false)
+  const [sort,         setSort]         = useState('newest')
+  const [inStock,      setInStock]      = useState(false)
+  const [priceRange,   setPriceRange]   = useState<{ min: number; max: number } | null>(null)
   const [mobileFilter, setMobileFilter] = useState(false)
-  const [cols,        setCols]        = useState<2 | 3>(2)
-  const [openFilter,  setOpenFilter]  = useState<string | null>('price')
+  const [cols,         setCols]         = useState<2 | 3>(2)
+  const [openFilter,   setOpenFilter]   = useState<string | null>('price')
 
-  const togglePrice = (r: string) =>
-    setPrices(ps => ps.includes(r) ? ps.filter(p => p !== r) : [...ps, r])
+  const LIMIT = 20
+
+  const fetchProducts = useCallback(async (pageNum: number, replace: boolean) => {
+    try {
+      replace ? setLoading(true) : setLoadingMore(true)
+
+      const category = slug === 'all' ? undefined : SLUG_TO_CATEGORY[slug]
+
+      const res = await getProducts({
+        page:      pageNum,
+        limit:     LIMIT,
+        category,
+        sort,
+        in_stock:  inStock || undefined,
+        min_price: priceRange?.min,
+        max_price: priceRange?.max === 99999 ? undefined : priceRange?.max,
+      })
+
+      const mapped = (res.products || []).map(toCardProduct)
+      setProducts(prev => replace ? mapped : [...prev, ...mapped])
+      setTotal(res.total || 0)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [slug, sort, inStock, priceRange])
+
+  // Reset and fetch on filter/sort change
+  useEffect(() => {
+    setPage(1)
+    fetchProducts(1, true)
+  }, [slug, sort, inStock, priceRange])
+
+  const handleLoadMore = () => {
+    const next = page + 1
+    setPage(next)
+    fetchProducts(next, false)
+  }
+
+  const hasMore = products.length < total
 
   const FilterContent = () => (
     <div className="space-y-0 divide-y divide-gray-100">
@@ -61,15 +138,17 @@ export default function CollectionPage() {
         {openFilter === 'price' && (
           <div className="pb-4 space-y-2.5">
             {PRICE_RANGES.map(r => (
-              <label key={r} className="flex items-center gap-2.5 cursor-pointer group">
+              <label key={r.label} className="flex items-center gap-2.5 cursor-pointer group">
                 <div
-                  onClick={() => togglePrice(r)}
+                  onClick={() => setPriceRange(
+                    priceRange?.min === r.min ? null : { min: r.min, max: r.max }
+                  )}
                   className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer
-                    ${prices.includes(r) ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}
+                    ${priceRange?.min === r.min ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}
                 >
-                  {prices.includes(r) && <span className="text-white text-[10px] leading-none">✓</span>}
+                  {priceRange?.min === r.min && <span className="text-white text-[10px] leading-none">✓</span>}
                 </div>
-                <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{r}</span>
+                <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{r.label}</span>
               </label>
             ))}
           </div>
@@ -87,17 +166,23 @@ export default function CollectionPage() {
         </button>
         {openFilter === 'avail' && (
           <div className="pb-4 space-y-2.5">
-            {['In Stock', 'Out of Stock'].map(r => (
-              <label key={r} className="flex items-center gap-2.5 cursor-pointer group">
-                <div className="w-4 h-4 rounded border-[1.5px] border-gray-300 group-hover:border-gray-500 transition-colors" />
-                <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{r}</span>
-              </label>
-            ))}
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <div
+                onClick={() => setInStock(!inStock)}
+                className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer
+                  ${inStock ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}
+              >
+                {inStock && <span className="text-white text-[10px] leading-none">✓</span>}
+              </div>
+              <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">In Stock Only</span>
+            </label>
           </div>
         )}
       </div>
     </div>
   )
+
+  const activeFilterCount = (priceRange ? 1 : 0) + (inStock ? 1 : 0)
 
   return (
     <div className="bg-white min-h-screen">
@@ -117,7 +202,9 @@ export default function CollectionPage() {
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-[24px] font-light text-gray-900 tracking-wide">{label}</h1>
-            <p className="text-[12px] text-gray-400 mt-1">{PRODUCTS.length} products</p>
+            <p className="text-[12px] text-gray-400 mt-1">
+              {loading ? 'Loading...' : `${total} products`}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {/* Mobile filter */}
@@ -127,7 +214,11 @@ export default function CollectionPage() {
             >
               <SlidersHorizontal size={13} />
               Filter
-              {prices.length > 0 && <span className="w-4 h-4 bg-gray-900 text-white text-[9px] rounded-full flex items-center justify-center">{prices.length}</span>}
+              {activeFilterCount > 0 && (
+                <span className="w-4 h-4 bg-gray-900 text-white text-[9px] rounded-full flex items-center justify-center">
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
 
             {/* Grid toggle */}
@@ -149,7 +240,7 @@ export default function CollectionPage() {
                 onChange={e => setSort(e.target.value)}
                 className="appearance-none pl-3.5 pr-8 h-9 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 bg-white cursor-pointer outline-none hover:border-gray-400 transition-colors"
               >
-                {SORT_OPTIONS.map(o => <option key={o}>{o}</option>)}
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
@@ -158,17 +249,29 @@ export default function CollectionPage() {
       </div>
 
       {/* Active filters */}
-      {prices.length > 0 && (
+      {(priceRange || inStock) && (
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3 flex items-center gap-2 flex-wrap border-b border-gray-50">
           <span className="text-[11px] text-gray-400">Filters:</span>
-          {prices.map(p => (
-            <button key={p} onClick={() => togglePrice(p)}
+          {priceRange && (
+            <button
+              onClick={() => setPriceRange(null)}
               className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors"
             >
-              {p} <X size={10} />
+              {PRICE_RANGES.find(r => r.min === priceRange.min)?.label} <X size={10} />
             </button>
-          ))}
-          <button onClick={() => setPrices([])} className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1">
+          )}
+          {inStock && (
+            <button
+              onClick={() => setInStock(false)}
+              className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors"
+            >
+              In Stock <X size={10} />
+            </button>
+          )}
+          <button
+            onClick={() => { setPriceRange(null); setInStock(false) }}
+            className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1"
+          >
             Clear all
           </button>
         </div>
@@ -186,16 +289,43 @@ export default function CollectionPage() {
 
         {/* Products */}
         <div className="flex-1">
-          <div className={`grid gap-x-4 gap-y-8 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'} lg:grid-cols-${cols === 3 ? '4' : '3'}`}>
-            {PRODUCTS.map((p, i) => <ProductCard key={p.id} product={p} idx={i} />)}
-          </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-24">
+              <Loader2 size={28} className="animate-spin text-gray-300" />
+            </div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-24">
+              <p className="text-gray-400 text-[14px]">No products found</p>
+              <button
+                onClick={() => { setPriceRange(null); setInStock(false) }}
+                className="mt-4 text-[12px] text-gray-500 underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className={cols === 3
+                ? 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-4'
+                : 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-3'
+              }>
+                {products.map((p, i) => <ProductCard key={p.id} product={p} idx={i} />)}
+              </div>
 
-          {/* Load more */}
-          <div className="text-center mt-12">
-            <button className="px-10 py-3 border border-gray-300 text-[12px] tracking-[0.15em] uppercase font-medium text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-200">
-              Load More
-            </button>
-          </div>
+              {hasMore && (
+                <div className="text-center mt-12">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="px-10 py-3 border border-gray-300 text-[12px] tracking-[0.15em] uppercase font-medium text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 mx-auto"
+                  >
+                    {loadingMore && <Loader2 size={13} className="animate-spin" />}
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -203,7 +333,10 @@ export default function CollectionPage() {
       {mobileFilter && (
         <>
           <div className="fixed inset-0 z-[80] bg-black/30" onClick={() => setMobileFilter(false)} />
-          <div className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto px-5 pt-5 pb-8" style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.10)' }}>
+          <div
+            className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto px-5 pt-5 pb-8"
+            style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.10)' }}
+          >
             <div className="flex items-center justify-between mb-5">
               <p className="text-[14px] font-semibold text-gray-900">Filter Products</p>
               <button onClick={() => setMobileFilter(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">

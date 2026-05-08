@@ -1,5 +1,5 @@
 export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
-export type PaymentStatus = 'PAID' | 'UNPAID' | 'COD'
+export type PaymentStatus = 'PAID' | 'UNPAID'
 export type UserRole = 'USER' | 'ADMIN'
 
 export interface DashboardStats {
@@ -35,7 +35,7 @@ export interface Order {
   shippingAddress: { line1: string; line2?: string; city: string; state: string; pincode: string; phone: string }
   items: OrderItem[]
   amount: number
-  paymentMethod: 'ONLINE' | 'COD'
+  paymentMethod: 'ONLINE'
   paymentStatus: PaymentStatus
   status: OrderStatus
   razorpayOrderId?: string
