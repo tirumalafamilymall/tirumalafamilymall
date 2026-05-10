@@ -154,6 +154,7 @@ export const createOrder = (data: {
     pincode: string
   }
   notes?: string
+  shipping_amount: number // <--- ADD THIS
 }) =>
   userFetch('/api/orders', {
     method: 'POST',

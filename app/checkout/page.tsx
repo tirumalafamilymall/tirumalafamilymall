@@ -43,12 +43,43 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
+  const [shippingCost, setShippingCost] = useState<number | null>(null)
+  const [isCheckingShipping, setIsCheckingShipping] = useState(false)
+
 useEffect(() => {
   const unsub = onAuthChange(user => {
     if (!user) router.replace('/account')
   })
   return () => unsub()
 }, [])
+
+useEffect(() => {
+    async function checkShipping() {
+      if (form.pincode.length === 6) {
+        setIsCheckingShipping(true)
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`)
+          const data = await res.json()
+          
+          if (data.is_serviceable) {
+            
+            const cost = data.shipping_cost
+            setShippingCost(cost)
+          } else {
+            setError("Sorry, we don't deliver to this pincode yet.")
+            setShippingCost(null)
+          }
+        } catch (err) {
+          console.error("Shipping check failed")
+        } finally {
+          setIsCheckingShipping(false)
+        }
+      } else {
+        setShippingCost(null) // Reset if pincode is deleted/incomplete
+      }
+    }
+    checkShipping()
+  }, [form.pincode, totalPrice])
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -67,13 +98,19 @@ useEffect(() => {
       return
     }
 
+    if (shippingCost === null && !isCheckingShipping) {
+      setError('Please enter a valid pincode to calculate shipping');
+      return;
+    }
+
     setError('')
     setLoading(true)
 
-    try {
-      // Step 1 — create order on backend (reads cart server-side)
+try {
+      // Step 1 — PASS SHIPPING AMOUNT TO BACKEND
       const { order } = await createOrder({
         shipping_address: { name, phone, address, city, state, pincode },
+        shipping_amount: displayShipping, // <--- PASS THIS HERE
       })
 
       // Step 2 — Online: open Razorpay
@@ -123,8 +160,8 @@ useEffect(() => {
     }
   }
 
-  const shipping = totalPrice() >= 999 ? 0 : 60
-  const total    = totalPrice() + shipping
+  const displayShipping = shippingCost !== null ? shippingCost : 0
+  const total = totalPrice() + displayShipping
 
   return (
     <div className="bg-[#f8f8f8] min-h-screen pb-20">
@@ -249,14 +286,16 @@ useEffect(() => {
           </div>
 
           <div className="border-t pt-4 space-y-2 mb-6">
-            <div className="flex justify-between text-[14px] text-gray-600">
-              <span>Subtotal</span>
-              <span>₹{totalPrice().toLocaleString('en-IN')}</span>
-            </div>
-            <div className="flex justify-between text-[14px]">
+<div className="flex justify-between text-[14px]">
               <span className="text-gray-600">Shipping</span>
-              <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-gray-600'}>
-                {shipping === 0 ? 'FREE' : `₹${shipping}`}
+              <span className="text-gray-900 font-medium">
+                {isCheckingShipping ? (
+                  <span className="flex items-center gap-1 animate-pulse text-gray-400">Calculating...</span>
+                ) : shippingCost === null ? (
+                  <span className="text-[11px] text-gray-400 italic">Enter pincode</span>
+                ) : (
+                  `₹${displayShipping}`
+                )}
               </span>
             </div>
             <div className="flex justify-between font-semibold text-[18px] pt-2 border-t">
