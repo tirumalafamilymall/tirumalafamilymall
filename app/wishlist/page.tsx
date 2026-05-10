@@ -49,7 +49,6 @@ export default function WishlistPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8">
           {items.map((item, i) => (
             <div key={item.id} className="group relative">
-// Change the Link inside wishlist map to:
 <Link href={item.href}
   className="block aspect-[3/4] rounded-xl overflow-hidden mb-3"
   style={{ background: PLACEHOLDER_COLORS[i % 6] }}
