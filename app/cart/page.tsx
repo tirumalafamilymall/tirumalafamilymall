@@ -1,15 +1,14 @@
 'use client'
 
 import Link from 'next/link'
-import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, Tag } from 'lucide-react'
+import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react'
 import { useCartStore } from '@/store'
-
-const PLACEHOLDER_COLORS = ['#f5ede4','#e8f0fd','#f5e4ea','#e4f5ec']
+import Image from 'next/image'
 
 export default function CartPage() {
   const { items, removeItem, updateQty, totalItems, totalPrice } = useCartStore()
-  const shipping = totalPrice() >= 999 ? 0 : 60
-  const total    = totalPrice() + shipping
+  
+  const subtotal = totalPrice()
 
   if (items.length === 0) {
     return (
@@ -49,15 +48,18 @@ export default function CartPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Items list */}
           <div className="lg:col-span-2 space-y-3">
-            {items.map((item, i) => (
-              <div key={`${item.id}-${item.size}`}
+            {items.map((item) => (
+              <div key={`${item.productId}-${item.size}`}
                 className="flex gap-4 p-4 border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors"
               >
                 <Link href={`/products/${item.productId}`}
-                  className="w-20 h-24 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
-                  style={{ background: PLACEHOLDER_COLORS[i % 4] }}
+                  className="w-20 h-24 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 flex items-center justify-center"
                 >
-                  <span className="text-3xl opacity-20">👗</span>
+                  {item.image ? (
+                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                  ) : (
+                    <span className="text-3xl opacity-20">👗</span>
+                  )}
                 </Link>
 
                 <div className="flex-1 min-w-0">
@@ -69,19 +71,19 @@ export default function CartPage() {
 
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-0 border border-gray-200 rounded-lg">
-                      <button onClick={() => updateQty(item.id, item.size, item.qty - 1)}
+                      <button onClick={() => updateQty(item.productId, item.size, item.qty - 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-l-lg transition-colors text-gray-500"
                       >
                         <Minus size={11} />
                       </button>
                       <span className="w-8 text-center text-[13px] font-medium">{item.qty}</span>
-                      <button onClick={() => updateQty(item.id, item.size, item.qty + 1)}
+                      <button onClick={() => updateQty(item.productId, item.size, item.qty + 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-r-lg transition-colors text-gray-500"
                       >
                         <Plus size={11} />
                       </button>
                     </div>
-                    <button onClick={() => removeItem(item.id, item.size)}
+                    <button onClick={() => removeItem(item.productId, item.size)}
                       className="flex items-center gap-1 text-[11.5px] text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={12} /> Remove
@@ -106,38 +108,14 @@ export default function CartPage() {
           <div className="bg-gray-50 rounded-2xl p-6 h-fit border border-gray-100 sticky top-28">
             <h2 className="text-[15px] font-semibold text-gray-900 mb-5 pb-4 border-b border-gray-200">Order Summary</h2>
 
-            <div className="space-y-3 mb-5">
-              <div className="flex justify-between text-[13px] text-gray-600">
+            <div className="space-y-3 mb-5 border-b border-gray-200 pb-5">
+              <div className="flex justify-between text-[14px] font-medium text-gray-900">
                 <span>Subtotal ({totalItems()} items)</span>
-                <span>₹{totalPrice().toLocaleString('en-IN')}</span>
+                <span>₹{subtotal.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between text-[13px]">
-                <span className="text-gray-600">Shipping</span>
-                <span className={shipping === 0 ? 'text-green-600 font-medium' : 'text-gray-600'}>
-                  {shipping === 0 ? 'FREE' : `₹${shipping}`}
-                </span>
-              </div>
-              {shipping > 0 && (
-                <p className="text-[11.5px] text-amber-600 bg-amber-50 border border-amber-100 px-3 py-2 rounded-lg">
-                  Add ₹{(999 - totalPrice()).toLocaleString('en-IN')} more for free shipping
-                </p>
-              )}
-            </div>
-
-            <div className="border-t border-gray-200 pt-4 mb-5 flex justify-between">
-              <span className="text-[14px] font-semibold text-gray-900">Total</span>
-              <span className="text-[16px] font-bold text-gray-900">₹{total.toLocaleString('en-IN')}</span>
-            </div>
-
-            {/* Promo code */}
-            <div className="flex gap-2 mb-5">
-              <div className="flex-1 flex items-center gap-2 border border-gray-200 rounded-xl px-3 bg-white">
-                <Tag size={13} className="text-gray-300 shrink-0" />
-                <input type="text" placeholder="Promo code" className="flex-1 outline-none text-[12.5px] text-gray-600 bg-transparent py-2.5 placeholder:text-gray-300" />
-              </div>
-              <button className="px-4 border border-gray-200 rounded-xl text-[12px] font-medium text-gray-600 hover:bg-gray-100 transition-colors bg-white">
-                Apply
-              </button>
+              <p className="text-[11.5px] text-gray-400 leading-relaxed italic">
+                Shipping and taxes will be calculated at checkout based on your delivery address.
+              </p>
             </div>
 
             <Link href="/checkout"
@@ -147,7 +125,7 @@ export default function CartPage() {
             </Link>
 
             <div className="flex items-center justify-center gap-2 text-[11px] text-gray-400">
-              <span>💳</span> COD & Online Payment Available
+              <span>💳</span> Secured Checkout & Fast Delivery
             </div>
           </div>
         </div>
