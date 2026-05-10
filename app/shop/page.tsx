@@ -3,13 +3,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Loader2 } from 'lucide-react'
 import ProductCard from '@/components/ProductCard'
-import { getProducts } from '@/lib/api'
+import { getProducts, getProductFilters } from '@/lib/api'
 
-const CATEGORIES = ['All', 'Women', 'Men', 'Kids']
 const SORT_MAP: Record<string, string> = { new: 'newest', low: 'price_asc', high: 'price_desc' }
-const CATEGORY_MAP: Record<string, string | undefined> = {
-  All: undefined, Women: 'Women', Men: 'Men', Kids: 'Kids',
-}
 
 function toCard(p: any) {
   return {
@@ -23,15 +19,28 @@ function toCard(p: any) {
 }
 
 export default function ShopPage() {
-  const [products,    setProducts]    = useState<any[]>([])
-  const [total,       setTotal]       = useState(0)
-  const [page,        setPage]        = useState(1)
-  const [loading,     setLoading]     = useState(true)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [category,    setCategory]    = useState('All')
-  const [search,      setSearch]      = useState('')
-  const [sort,        setSort]        = useState('new')
-  const [debounced,   setDebounced]   = useState('')
+  const [products,     setProducts]     = useState<any[]>([])
+  const [categories,   setCategories]   = useState<string[]>(['All']) // Dynamic Categories
+  const [total,        setTotal]        = useState(0)
+  const [page,         setPage]         = useState(1)
+  const [loading,      setLoading]      = useState(true)
+  const [loadingMore,  setLoadingMore]  = useState(false)
+  const [category,     setCategory]     = useState('All')
+  const [search,       setSearch]       = useState('')
+  const [sort,         setSort]         = useState('new')
+  const [debounced,    setDebounced]    = useState('')
+
+  // 1. Fetch Dynamic Categories on Mount
+  useEffect(() => {
+    getProductFilters()
+      .then(res => {
+        if (res.success && res.filters?.categories) {
+          // Prepend 'All' to the list of categories from the database
+          setCategories(['All', ...res.filters.categories])
+        }
+      })
+      .catch(err => console.error("Failed to load filters", err))
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(search), 400)
@@ -43,7 +52,7 @@ export default function ShopPage() {
       replace ? setLoading(true) : setLoadingMore(true)
       const res = await getProducts({
         page: pageNum, limit: 20,
-        category: CATEGORY_MAP[category],
+        category: category === 'All' ? undefined : category, // Dynamic logic
         sort: SORT_MAP[sort],
         search: debounced || undefined,
       })
@@ -81,12 +90,15 @@ export default function ShopPage() {
             onChange={e => setSearch(e.target.value)}
             className="border px-4 py-2 text-sm w-full md:w-64 focus:outline-none rounded-lg" />
           <div className="flex gap-3 flex-wrap">
-            {CATEGORIES.map(cat => (
+            
+            {/* Dynamic mapping over categories */}
+            {categories.map(cat => (
               <button key={cat} onClick={() => setCategory(cat)}
                 className={`px-4 py-2 text-sm border rounded-full transition ${category === cat ? 'bg-black text-white' : 'hover:bg-black hover:text-white'}`}>
                 {cat}
               </button>
             ))}
+
           </div>
           <select value={sort} onChange={e => setSort(e.target.value)} className="border px-4 py-2 text-sm rounded-lg">
             <option value="new">Newest First</option>

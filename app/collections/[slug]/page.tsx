@@ -7,40 +7,8 @@ import { SlidersHorizontal, ChevronDown, X, Grid, LayoutGrid, Loader2 } from 'lu
 import ProductCard, { Product } from '@/components/ProductCard'
 import { getProducts } from '@/lib/api'
 
-const LABELS: Record<string, string> = {
-  women: 'Women', men: 'Men', kids: 'Kids', sarees: 'Sarees', kurtis: 'Kurtis & Kurtas',
-  'dress-materials': 'Dress Materials', '3-piece': '3 Piece Sets', '2-piece': '2 Piece Sets',
-  frocks: 'Long Frocks', nightwear: 'Nightwear', leggings: 'Leggings', tops: 'Tops & Midis',
-  shirts: 'Shirts', 'men-kurtas': 'Ethnic Kurtas', 'jeans-men': 'Men Jeans', trousers: 'Trousers',
-  blazers: 'Blazers', sherwani: 'Sherwani', ramraj: 'Ramraj Collection', 'jeans-women': 'Women Jeans',
-  coord: 'Coord Sets', plazo: 'Plazo Pants', innerwear: 'Inner Wear', blouses: 'Blouses',
-  'girls-frocks': 'Girls Frocks', 'girls-lehenga': 'Girls Lehenga', 'girls-kurtas': 'Girls Kurta Sets',
-  'girls-dresses': 'Girls Dresses', 'boys-kurtas': 'Boys Kurta Sets', 'boys-sherwani': 'Boys Sherwani',
-  'boys-tshirts': 'Boys T-Shirts', 'boys-bottoms': 'Boys Pants & Jeans', anarkali: 'Anarkali Sets',
-  lehenga: 'Lehenga', 'half-sarees': 'Half Sarees', 'insta-live': 'Insta Live', sale: 'Sale',
-  all: 'All Products',
-}
-
-// Map slug → backend category name
-const SLUG_TO_CATEGORY: Record<string, string> = {
-  women: 'Women', men: 'Men', kids: 'Kids', sarees: 'Sarees',
-  kurtis: 'Kurtis', 'dress-materials': 'Dress Materials',
-  '3-piece': '3 Piece Sets', '2-piece': '2 Piece Sets',
-  frocks: 'Frocks', nightwear: 'Nightwear', leggings: 'Leggings',
-  tops: 'Tops', shirts: 'Shirts', 'men-kurtas': 'Ethnic Kurtas',
-  'jeans-men': 'Jeans', trousers: 'Trousers', blazers: 'Blazers',
-  sherwani: 'Sherwani', ramraj: 'Ramraj', 'jeans-women': 'Jeans',
-  coord: 'Coord Sets', plazo: 'Plazo', innerwear: 'Innerwear',
-  blouses: 'Blouses', 'girls-frocks': 'Girls Frocks',
-  'girls-lehenga': 'Girls Lehenga', 'girls-kurtas': 'Girls Kurtas',
-  'girls-dresses': 'Girls Dresses', 'boys-kurtas': 'Boys Kurtas',
-  'boys-sherwani': 'Boys Sherwani', 'boys-tshirts': 'Boys T-Shirts',
-  'boys-bottoms': 'Boys Bottoms', anarkali: 'Anarkali', lehenga: 'Lehenga',
-  'half-sarees': 'Half Sarees', sale: 'Sale',
-}
-
 const SORT_OPTIONS = [
-  { label: 'Newest First',        value: 'newest' },
+  { label: 'Newest First',      value: 'newest' },
   { label: 'Price: Low to High',  value: 'price_asc' },
   { label: 'Price: High to Low',  value: 'price_desc' },
 ]
@@ -66,8 +34,15 @@ function toCardProduct(p: any): Product {
 
 export default function CollectionPage() {
   const params = useParams()
-  const slug   = (params?.slug as string) ?? 'all'
-  const label  = LABELS[slug] ?? slug.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const rawSlug  = (params?.slug as string) ?? 'all'
+  
+  // Dynamically derive the label and category from the slug
+  // e.g., 'mens-shirts' -> 'Mens Shirts'
+  const deriveLabel = (s: string) => s === 'all' ? 'All Products' : s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const label = deriveLabel(rawSlug)
+  
+  // For the API call, we use the derived label as the category string
+  const activeCategory = rawSlug === 'all' ? undefined : label
 
   const [products,     setProducts]     = useState<Product[]>([])
   const [total,        setTotal]        = useState(0)
@@ -87,12 +62,10 @@ export default function CollectionPage() {
     try {
       replace ? setLoading(true) : setLoadingMore(true)
 
-      const category = slug === 'all' ? undefined : SLUG_TO_CATEGORY[slug]
-
       const res = await getProducts({
         page:      pageNum,
         limit:     LIMIT,
-        category,
+        category:  activeCategory, // Use the dynamically derived category
         sort,
         in_stock:  inStock || undefined,
         min_price: priceRange?.min,
@@ -108,13 +81,13 @@ export default function CollectionPage() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [slug, sort, inStock, priceRange])
+  }, [activeCategory, sort, inStock, priceRange])
 
   // Reset and fetch on filter/sort change
   useEffect(() => {
     setPage(1)
     fetchProducts(1, true)
-  }, [slug, sort, inStock, priceRange])
+  }, [activeCategory, sort, inStock, priceRange])
 
   const handleLoadMore = () => {
     const next = page + 1
