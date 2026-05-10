@@ -114,16 +114,24 @@ export const useCartStore = create<CartStore>()(
    WISHLIST STORE (Member + Guest Hybrid)
 ───────────────────────────────────────── */
 interface WishlistStore {
-  items: WishItem[];
-  syncWishlist: () => Promise<void>;
-  toggle: (item: WishItem) => Promise<void>;
-  has: (id: string) => boolean;
+  items:          WishItem[];
+  isOpen:         boolean;           // <--- Added back
+  openWishlist:   () => void;        // <--- Added back
+  closeWishlist:  () => void;        // <--- Added back
+  syncWishlist:   () => Promise<void>;
+  toggle:         (item: WishItem) => Promise<void>;
+  has:            (id: string) => boolean;
 }
 
 export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set, get) => ({
       items: [],
+      isOpen: false, // <--- Initial state
+
+      openWishlist:  () => set({ isOpen: true }),  // <--- Implementation
+      closeWishlist: () => set({ isOpen: false }), // <--- Implementation
+
       syncWishlist: async () => {
         try {
           const res = await getWishlist()
@@ -139,6 +147,7 @@ export const useWishlistStore = create<WishlistStore>()(
           }
         } catch {}
       },
+
       toggle: async (item) => {
         const exists = get().items.find(i => i.id === item.id)
         set({ items: exists ? get().items.filter(i => i.id !== item.id) : [...get().items, item] })
@@ -146,9 +155,15 @@ export const useWishlistStore = create<WishlistStore>()(
           exists ? await removeFromWishlist(item.id) : await addToWishlist(item.id)
         } catch {}
       },
+
       has: (id) => get().items.some(i => i.id === id),
     }),
-    { name: 'tfm-wishlist' }
+    { 
+      name: 'tfm-wishlist',
+      // partialize ensures we don't save the 'isOpen' state to the browser,
+      // so the drawer is always closed when the page first loads.
+      partialize: (state) => ({ items: state.items }),
+    }
   )
 )
 
