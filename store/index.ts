@@ -5,6 +5,7 @@ import {
   getWishlist, addToWishlist, removeFromWishlist,
 } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
+import { persist, createJSONStorage } from 'zustand/middleware'
 
 /* ─── Types ─── */
 export interface CartItem {
@@ -45,9 +46,11 @@ interface CartStore {
   clear:     () => void
 }
 
-export const useCartStore = create<CartStore>((set, get) => ({
-  items:  [],
-  isOpen: false,
+export const useCartStore = create<CartStore>()(
+  persist(
+    (set, get) => ({
+      items:  [],
+      isOpen: false,
   synced: false,
 
   openCart:  () => set({ isOpen: true }),
@@ -138,7 +141,15 @@ export const useCartStore = create<CartStore>((set, get) => ({
   totalItems: () => get().items.reduce((s, i) => s + i.qty, 0),
   totalPrice: () => get().items.reduce((s, i) => s + i.price * i.qty, 0),
   clear:      () => set({ items: [], synced: false }),
-}))
+}),
+    {
+      name: 'tfm-cart-storage', // The name of the key in localStorage
+      storage: createJSONStorage(() => localStorage),
+      // Don't save 'isOpen' state, only save the items
+      partialize: (state) => ({ items: state.items }), 
+    }
+  )
+)
 
 /* ─────────────────────────────────────────
    WISHLIST STORE
@@ -153,10 +164,11 @@ interface WishlistStore {
   has:            (id: string) => boolean
 }
 
-export const useWishlistStore = create<WishlistStore>((set, get) => ({
-  items:  [],
-  isOpen: false,
-
+export const useWishlistStore = create<WishlistStore>()(
+  persist(
+    (set, get) => ({
+      items:  [],
+      isOpen: false,
   openWishlist:  () => set({ isOpen: true }),
   closeWishlist: () => set({ isOpen: false }),
 
@@ -196,8 +208,15 @@ export const useWishlistStore = create<WishlistStore>((set, get) => ({
     }
   },
 
-  has: (id) => !!get().items.find(i => i.id === id),
-}))
+has: (id) => !!get().items.find(i => i.id === id),
+    }),
+    {
+      name: 'tfm-wishlist-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ items: state.items }),
+    }
+  )
+)
 
 /* ─────────────────────────────────────────
    AUTH SYNC — call once in root layout
