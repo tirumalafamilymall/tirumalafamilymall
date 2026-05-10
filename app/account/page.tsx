@@ -168,26 +168,6 @@ export default function AccountPage() {
                 <p className="text-[13px] text-gray-500">Track & view purchases</p>
               </div>
             </Link>
-
-            <button className="bg-white border border-gray-100 p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-gray-200 transition-all flex items-center gap-5 group text-left opacity-60 cursor-not-allowed">
-              <div className="h-14 w-14 bg-pink-50 text-pink-600 rounded-2xl flex items-center justify-center">
-                <Heart size={24} strokeWidth={1.5} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[16px] text-gray-900 mb-0.5">Wishlist</h3>
-                <p className="text-[13px] text-gray-500">Coming soon</p>
-              </div>
-            </button>
-
-            <button className="bg-white border border-gray-100 p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-gray-200 transition-all flex items-center gap-5 group text-left opacity-60 cursor-not-allowed">
-              <div className="h-14 w-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
-                <Settings size={24} strokeWidth={1.5} />
-              </div>
-              <div>
-                <h3 className="font-semibold text-[16px] text-gray-900 mb-0.5">Settings</h3>
-                <p className="text-[13px] text-gray-500">Coming soon</p>
-              </div>
-            </button>
             
             <button onClick={handleLogout} className="bg-white border border-gray-100 p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.06)] hover:border-gray-200 transition-all flex items-center gap-5 group text-left">
               <div className="h-14 w-14 bg-gray-50 text-gray-600 rounded-2xl flex items-center justify-center group-hover:bg-gray-100 transition-colors">
