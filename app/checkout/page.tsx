@@ -54,32 +54,42 @@ useEffect(() => {
 }, [])
 
 useEffect(() => {
-    async function checkShipping() {
-      if (form.pincode.length === 6) {
-        setIsCheckingShipping(true)
-        try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`)
-          const data = await res.json()
-          
-          if (data.is_serviceable) {
-            
-            const cost = data.shipping_cost
-            setShippingCost(cost)
-          } else {
-            setError("Sorry, we don't deliver to this pincode yet.")
-            setShippingCost(null)
-          }
-        } catch (err) {
-          console.error("Shipping check failed")
-        } finally {
-          setIsCheckingShipping(false)
+  async function checkShipping() {
+    if (form.pincode.length === 6) {
+      setIsCheckingShipping(true);
+      setError(''); // Clear previous errors
+      
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`);
+        const data = await res.json();
+        
+        // If the server returned an error (404, 500, etc.)
+        if (!res.ok) {
+          setError(data.error || "Could not verify shipping. Please try again.");
+          setShippingCost(null);
+          return;
         }
-      } else {
-        setShippingCost(null) // Reset if pincode is deleted/incomplete
+        
+        if (data.is_serviceable) {
+          setShippingCost(data.shipping_cost);
+          setError(''); // Success!
+        } else {
+          setError("Sorry, we don't deliver to this pincode yet.");
+          setShippingCost(null);
+        }
+      } catch (err) {
+        console.error("Shipping check failed:", err);
+        setError("Shipping service is currently unavailable.");
+      } finally {
+        setIsCheckingShipping(false);
       }
+    } else {
+      setShippingCost(null);
+      // Don't clear error here so the user can see what went wrong
     }
-    checkShipping()
-  }, [form.pincode, totalPrice])
+  }
+  checkShipping();
+}, [form.pincode, totalPrice]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })

@@ -191,18 +191,23 @@ export default function OrderDetailPage() {
             ))}
           </div>
 
-          {/* Total */}
+{/* Total Breakdown */}
           <div className="border-t border-gray-100 mt-6 pt-5 space-y-2">
             <div className="flex justify-between text-[13px] text-gray-500">
               <span>Subtotal</span>
-              <span>₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+              {/* Math: Total minus shipping gives you the items price */}
+              <span>₹{(Number(order.total_amount) - Number(order.shipping_amount || 0)).toLocaleString('en-IN')}</span>
             </div>
+            
             <div className="flex justify-between text-[13px] text-gray-500">
               <span>Shipping</span>
-              <span className="text-green-600">FREE</span>
+              <span className={Number(order.shipping_amount) === 0 ? "text-green-600 font-medium" : "text-gray-900"}>
+                {Number(order.shipping_amount) === 0 ? 'FREE' : `₹${Number(order.shipping_amount).toLocaleString('en-IN')}`}
+              </span>
             </div>
-            <div className="flex justify-between text-[15px] font-semibold text-gray-900 pt-2 border-t border-gray-100">
-              <span>Total</span>
+
+            <div className="flex justify-between text-[16px] font-bold text-gray-900 pt-3 border-t border-gray-100 mt-2">
+              <span>Total Paid</span>
               <span>₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
             </div>
           </div>
