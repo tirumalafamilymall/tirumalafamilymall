@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { Heart, Share2, Star, Loader2 } from 'lucide-react'
 
 // --- API & Store Imports ---
-import { getProduct, getProducts, addToCart as apiAddToCart, addToWishlist, removeFromWishlist } from '@/lib/api'
+import { getProduct, getProducts, addToWishlist, removeFromWishlist } from '@/lib/api'
 import { useCartStore, useWishlistStore } from '@/store'
 import { addToRecent } from '@/lib/recent'
 import ProductCard, { Product as StoreProduct } from '@/components/ProductCard'
@@ -93,7 +93,7 @@ export default function ProductPage() {
   }, [related])
 
   // --- Handlers ---
-  const handleAddToCart = async (redirectCheckout = false) => {
+const handleAddToCart = async (redirectCheckout = false) => {
     if (availableSizes.length > 0 && !size) {
       setSizeError(true)
       return
@@ -102,11 +102,9 @@ export default function ProductPage() {
     setIsAdding(true)
 
     try {
-      // 1. Sync with backend cart
-      await apiAddToCart(product.id, qty)
-      
-      // 2. Update local Zustand UI store
-      addItem({
+      // FIX: Removed the manual apiAddToCart() call. 
+      // The Zustand store's addItem() already handles the DB sync!
+      await addItem({
         id: product.id,
         name: product.name,
         price: product.base_price,
