@@ -36,7 +36,7 @@ export default function CheckoutPage() {
     city:    '',
     state:   '',
     pincode: '',
-    payment: 'online', // Changed default to online
+    payment: 'online', 
   })
 
   const [error,   setError]   = useState('')
@@ -46,50 +46,48 @@ export default function CheckoutPage() {
   const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [isCheckingShipping, setIsCheckingShipping] = useState(false)
 
-useEffect(() => {
-  const unsub = onAuthChange(user => {
-    if (!user) router.replace('/account')
-  })
-  return () => unsub()
-}, [])
+  useEffect(() => {
+    const unsub = onAuthChange(user => {
+      if (!user) router.replace('/account')
+    })
+    return () => unsub()
+  }, [])
 
-useEffect(() => {
-  async function checkShipping() {
-    if (form.pincode.length === 6) {
-      setIsCheckingShipping(true);
-      setError(''); // Clear previous errors
-      
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`);
-        const data = await res.json();
+  useEffect(() => {
+    async function checkShipping() {
+      if (form.pincode.length === 6) {
+        setIsCheckingShipping(true);
+        setError(''); 
         
-        // If the server returned an error (404, 500, etc.)
-        if (!res.ok) {
-          setError(data.error || "Could not verify shipping. Please try again.");
-          setShippingCost(null);
-          return;
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`);
+          const data = await res.json();
+          
+          if (!res.ok) {
+            setError(data.error || "Could not verify shipping. Please try again.");
+            setShippingCost(null);
+            return;
+          }
+          
+          if (data.is_serviceable) {
+            setShippingCost(data.shipping_cost);
+            setError(''); 
+          } else {
+            setError("Sorry, we don't deliver to this pincode yet.");
+            setShippingCost(null);
+          }
+        } catch (err) {
+          console.error("Shipping check failed:", err);
+          setError("Shipping service is currently unavailable.");
+        } finally {
+          setIsCheckingShipping(false);
         }
-        
-        if (data.is_serviceable) {
-          setShippingCost(data.shipping_cost);
-          setError(''); // Success!
-        } else {
-          setError("Sorry, we don't deliver to this pincode yet.");
-          setShippingCost(null);
-        }
-      } catch (err) {
-        console.error("Shipping check failed:", err);
-        setError("Shipping service is currently unavailable.");
-      } finally {
-        setIsCheckingShipping(false);
+      } else {
+        setShippingCost(null);
       }
-    } else {
-      setShippingCost(null);
-      // Don't clear error here so the user can see what went wrong
     }
-  }
-  checkShipping();
-}, [form.pincode, totalPrice]);
+    checkShipping();
+  }, [form.pincode, totalPrice]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -116,26 +114,24 @@ useEffect(() => {
     setError('')
     setLoading(true)
 
-try {
-      // Step 1 — PASS SHIPPING AMOUNT TO BACKEND
+    try {
       const { order } = await createOrder({
         shipping_address: { name, phone, address, city, state, pincode },
-        shipping_amount: displayShipping, // <--- PASS THIS HERE
+        shipping_amount: displayShipping, 
       })
 
-      // Step 2 — Online: open Razorpay
       const loaded = await loadRazorpay()
       if (!loaded) throw new Error('Failed to load payment gateway')
 
-      // FIXED: using razorpay_order_id to match backend response
-      const { razorpay_order_id, amount, currency } = await createPaymentOrder(order.id)
+      // FIX APPLIED HERE: Extracting key_id from the backend response
+      const { razorpay_order_id, amount, currency, key_id } = await createPaymentOrder(order.id)
 
       await new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
-          key:         process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          key:         key_id, // FIX APPLIED HERE: Using the extracted key_id
           amount,
           currency,
-          order_id:    razorpay_order_id, // FIXED: matching new variable name
+          order_id:    razorpay_order_id, 
           name:        'Tirumala Family Mall',
           description: `Order #${order.id.slice(-8).toUpperCase()}`,
           prefill:     { name, contact: phone },
@@ -296,7 +292,7 @@ try {
           </div>
 
           <div className="border-t pt-4 space-y-2 mb-6">
-<div className="flex justify-between text-[14px]">
+            <div className="flex justify-between text-[14px]">
               <span className="text-gray-600">Shipping</span>
               <span className="text-gray-900 font-medium">
                 {isCheckingShipping ? (
