@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
 import { useCartStore } from '@/store'
 import { useRouter } from 'next/navigation'
-import { Loader2, ShieldCheck } from 'lucide-react'
+import { Loader2, ShieldCheck, AlertCircle, Info } from 'lucide-react'
 import { createOrder, createPaymentOrder, verifyPayment } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
 
@@ -60,6 +60,7 @@ export default function CheckoutPage() {
         setError(''); 
         
         try {
+          // Verify with the Shipping API
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`);
           const data = await res.json();
           
@@ -70,14 +71,13 @@ export default function CheckoutPage() {
           }
           
           if (data.is_serviceable) {
-            setShippingCost(data.shipping_cost);
+            setShippingCost(Number(data.shipping_cost));
             setError(''); 
           } else {
             setError("Sorry, we don't deliver to this pincode yet.");
             setShippingCost(null);
           }
         } catch (err) {
-          console.error("Shipping check failed:", err);
           setError("Shipping service is currently unavailable.");
         } finally {
           setIsCheckingShipping(false);
@@ -87,7 +87,7 @@ export default function CheckoutPage() {
       }
     }
     checkShipping();
-  }, [form.pincode, totalPrice]);
+  }, [form.pincode]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
@@ -123,19 +123,18 @@ export default function CheckoutPage() {
       const loaded = await loadRazorpay()
       if (!loaded) throw new Error('Failed to load payment gateway')
 
-      // FIX APPLIED HERE: Extracting key_id from the backend response
       const { razorpay_order_id, amount, currency, key_id } = await createPaymentOrder(order.id)
 
       await new Promise<void>((resolve, reject) => {
         const rzp = new window.Razorpay({
-          key:         key_id, // FIX APPLIED HERE: Using the extracted key_id
+          key:         key_id,
           amount,
           currency,
           order_id:    razorpay_order_id, 
           name:        'Tirumala Family Mall',
-          description: `Order #${order.id.slice(-8).toUpperCase()}`,
+          description: `Order #${order.order_number}`,
           prefill:     { name, contact: phone },
-          theme:       { color: '#CC0000' },
+          theme:       { color: '#000000' },
           handler: async (response: any) => {
             try {
               await verifyPayment({
@@ -167,162 +166,116 @@ export default function CheckoutPage() {
   }
 
   const displayShipping = shippingCost !== null ? shippingCost : 0
-  const total = totalPrice() + displayShipping
+  const total = Number(totalPrice()) + displayShipping
 
   return (
-    <div className="bg-[#f8f8f8] min-h-screen pb-20">
+    <div className="bg-[#fcfcfc] min-h-screen pb-20">
       <div className="max-w-[1200px] mx-auto px-6 py-12 grid lg:grid-cols-2 gap-12">
 
         {/* LEFT: FORM */}
         <div>
-          <p className="text-[10px] tracking-[0.4em] uppercase text-gray-400 mb-3">
-            Secure Checkout
-          </p>
-          <h2 className="heading-serif italic text-[32px] mb-8">
-            Shipping Details
-          </h2>
+          <p className="text-[10px] tracking-[0.4em] uppercase text-gray-400 mb-3">Secure Checkout</p>
+          <h2 className="heading-serif italic text-[32px] mb-8">Shipping Details</h2>
 
           <div className="space-y-4">
-            <input
-              name="name"
-              placeholder="Full Name"
-              value={form.name}
-              onChange={handleChange}
-              className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-            />
+            <input name="name" placeholder="Full Name" value={form.name} onChange={handleChange}
+              className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
 
-            <input
-              name="phone"
-              placeholder="Phone Number"
-              value={form.phone}
-              onChange={handleChange}
-              className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-            />
+            <input name="phone" placeholder="Phone Number" value={form.phone} onChange={handleChange}
+              className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
 
-            <textarea
-              name="address"
-              placeholder="Street Address / House No."
-              rows={2}
-              value={form.address}
-              onChange={handleChange}
-              className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-            />
+            <textarea name="address" placeholder="Street Address / House No." rows={2} value={form.address} onChange={handleChange}
+              className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
 
             <div className="grid grid-cols-2 gap-4">
-              <input
-                name="city"
-                placeholder="City"
-                value={form.city}
-                onChange={handleChange}
-                className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-              />
-              <input
-                name="state"
-                placeholder="State"
-                value={form.state}
-                onChange={handleChange}
-                className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-              />
+              <input name="city" placeholder="City" value={form.city} onChange={handleChange}
+                className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
+              <input name="state" placeholder="State" value={form.state} onChange={handleChange}
+                className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
             </div>
 
-            <input
-              name="pincode"
-              placeholder="Pincode"
-              value={form.pincode}
-              onChange={handleChange}
-              className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-            />
+            <input name="pincode" placeholder="Pincode (6 Digits)" value={form.pincode} onChange={handleChange} maxLength={6}
+              className="w-full border border-gray-200 p-4 rounded-xl bg-white focus:outline-none focus:border-black transition shadow-sm" />
 
-            {/* Payment */}
-            <div>
-              <p className="text-[11px] tracking-[0.2em] uppercase text-gray-500 mb-2">
-                Payment Method
+            <div className="bg-white border border-gray-100 p-4 rounded-xl shadow-sm">
+              <p className="text-[11px] tracking-[0.2em] uppercase text-gray-400 mb-3">Payment Method</p>
+              <div className="flex items-center gap-3 p-3 border border-black rounded-lg bg-black/5">
+                 <div className="w-4 h-4 rounded-full bg-black flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-white"/></div>
+                 <span className="text-[13px] font-medium">Online Payment (UPI, Card, NetBanking)</span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-3 flex items-center gap-1.5">
+                <Info size={12}/> Cash on Delivery (COD) is not available.
               </p>
-              <select
-                name="payment"
-                value={form.payment}
-                onChange={handleChange}
-                className="w-full border border-gray-200 p-3 rounded-lg bg-white focus:outline-none focus:border-black transition"
-              >
-                <option value="online">Pay Online (UPI / Card / Razorpay)</option>
-              </select>
             </div>
 
-            {error && (
-              <p className="text-red-500 text-[13px] bg-red-50 border border-red-100 px-3 py-2 rounded-lg">
-                {error}
-              </p>
-            )}
-
-            {success && (
-              <p className="text-green-600 text-[13px] bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
-                Order placed successfully 🎉 Redirecting...
-              </p>
-            )}
-
-            <div className="flex items-center gap-2 text-[11px] text-gray-400 mt-1">
-              <ShieldCheck size={13} className="text-green-500" />
-              Secured & encrypted checkout
-            </div>
+            {error && <p className="text-red-500 text-[13px] bg-red-50 border border-red-100 px-4 py-3 rounded-xl flex items-center gap-2"><AlertCircle size={14}/> {error}</p>}
+            {success && <p className="text-green-600 text-[13px] bg-green-50 border border-green-100 px-4 py-3 rounded-xl">Order placed successfully 🎉 Redirecting...</p>}
           </div>
         </div>
 
         {/* RIGHT: SUMMARY */}
-        <div className="bg-white p-6 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.06)] h-fit sticky top-28">
-          <h3 className="heading-serif text-[20px] mb-6">Order Summary</h3>
+        <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.04)] h-fit sticky top-28">
+          <h3 className="heading-serif text-[22px] mb-8">Order Summary</h3>
 
-          <div className="space-y-4 max-h-[280px] overflow-y-auto pr-1 mb-6">
-            {items.length === 0 ? (
-              <p className="text-gray-400 text-sm">Your cart is empty</p>
-            ) : (
-              items.map(item => (
-                <div key={`${item.id}-${item.size}`} className="flex justify-between items-start text-[14px]">
-                  <div>
-                    <p className="font-medium text-gray-800">{item.name}</p>
-                    <p className="text-[12px] text-gray-400">
-                      {item.size && `Size: ${item.size} · `}Qty: {item.qty}
-                    </p>
+          <div className="space-y-6 max-h-[320px] overflow-y-auto pr-2 mb-8 custom-scrollbar">
+            {items.map(item => (
+              <div key={`${item.variantId}`} className="flex justify-between items-start text-[14px]">
+                <div className="flex gap-4">
+                  <div className="w-12 h-16 bg-gray-50 rounded-lg overflow-hidden shrink-0">
+                    <img src={item.image} alt="" className="w-full h-full object-cover" />
                   </div>
-                  <span className="font-semibold shrink-0 ml-4">
-                    ₹{(item.price * item.qty).toLocaleString('en-IN')}
-                  </span>
+                  <div>
+                    <p className="font-semibold text-gray-900">{item.name}</p>
+                    <p className="text-[12px] text-gray-400 mt-0.5">
+                      {item.size && `Size: ${item.size}`} {item.color && ` · ${item.color}`}
+                    </p>
+                    <p className="text-[12px] text-gray-500">Qty: {item.qty}</p>
+                  </div>
                 </div>
-              ))
-            )}
+                <span className="font-bold text-gray-900">₹{(Number(item.price) * item.qty).toLocaleString('en-IN')}</span>
+              </div>
+            ))}
           </div>
 
-          <div className="border-t pt-4 space-y-2 mb-6">
+          <div className="border-t border-gray-100 pt-6 space-y-3 mb-8">
+            <div className="flex justify-between text-[14px] text-gray-600">
+              <span>Subtotal</span>
+              <span>₹{Number(totalPrice()).toLocaleString('en-IN')}</span>
+            </div>
             <div className="flex justify-between text-[14px]">
               <span className="text-gray-600">Shipping</span>
-              <span className="text-gray-900 font-medium">
-                {isCheckingShipping ? (
-                  <span className="flex items-center gap-1 animate-pulse text-gray-400">Calculating...</span>
-                ) : shippingCost === null ? (
-                  <span className="text-[11px] text-gray-400 italic">Enter pincode</span>
-                ) : (
-                  `₹${displayShipping}`
-                )}
+              <span className="text-gray-900 font-bold">
+                {isCheckingShipping ? <span className="animate-pulse text-gray-300">Calculating...</span> : shippingCost === null ? '—' : `₹${displayShipping}`}
               </span>
             </div>
-            <div className="flex justify-between font-semibold text-[18px] pt-2 border-t">
+            <div className="flex justify-between font-bold text-[20px] pt-4 border-t border-gray-100 text-black">
               <span>Total</span>
               <span>₹{total.toLocaleString('en-IN')}</span>
             </div>
           </div>
 
-          <button
-            onClick={handleOrder}
-            disabled={loading || success}
-            className="w-full py-4 bg-black text-white rounded-full text-[12px] tracking-[0.25em] uppercase
-            shadow-[0_10px_25px_rgba(0,0,0,0.2)]
-            hover:bg-[#CC0000] hover:shadow-[0_15px_35px_rgba(0,0,0,0.3)]
-            active:scale-95 transition-all duration-300
-            disabled:opacity-60 disabled:cursor-not-allowed
-            flex items-center justify-center gap-2"
-          >
-            {loading && <Loader2 size={14} className="animate-spin" />}
+          {/* STORE POLICY BOX */}
+          <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-2xl mb-6">
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-800 mb-2 flex items-center gap-1.5">
+               <AlertCircle size={13}/> Store Policy
+            </h4>
+            <ul className="text-[11px] text-amber-700/80 space-y-1 leading-relaxed">
+              <li>• All sales are final. No returns or refunds.</li>
+              <li>• Orders cannot be cancelled once placed.</li>
+              <li>• By clicking "Pay Now", you agree to these terms.</li>
+            </ul>
+          </div>
+
+          <button onClick={handleOrder} disabled={loading || success || items.length === 0}
+            className="w-full py-4 bg-black text-white rounded-full text-[12px] font-bold tracking-[0.25em] uppercase
+            shadow-[0_15px_35px_rgba(0,0,0,0.15)] hover:bg-[#CC0000] active:scale-[0.98] transition-all duration-300 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-3">
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16}/>}
             {loading ? 'Processing...' : 'Pay Now'}
           </button>
+          
+          <p className="text-center text-[11px] text-gray-400 mt-6 flex items-center justify-center gap-1.5">
+            <ShieldCheck size={12} className="text-green-500"/> Payments secured by Razorpay
+          </p>
         </div>
 
       </div>

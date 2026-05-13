@@ -68,6 +68,7 @@ export const updateProfile = (data: { name?: string }) =>
 export const getProducts = (params?: {
   page?: number
   limit?: number
+  department?: string 
   category?: string
   subcategory?: string
   sort?: string
@@ -75,18 +76,42 @@ export const getProducts = (params?: {
   max_price?: number
   in_stock?: boolean
   search?: string
+  size?: string   // <-- NEW
+  color?: string  // <-- NEW
 }) => {
   const q = new URLSearchParams()
-  if (params?.page)        q.set('page',        String(params.page))
-  if (params?.limit)       q.set('limit',       String(params.limit))
-  if (params?.category)    q.set('category',    params.category)
-  if (params?.subcategory) q.set('subcategory', params.subcategory)
-  if (params?.sort)        q.set('sort',        params.sort)
-  if (params?.min_price)   q.set('min_price',   String(params.min_price))
-  if (params?.max_price)   q.set('max_price',   String(params.max_price))
-  if (params?.in_stock)    q.set('in_stock',    'true')
-  if (params?.search)      q.set('search',      params.search)
+  // FIXED: Using !== undefined to safely allow '0'
+  if (params?.page !== undefined)        q.set('page',        String(params.page))
+  if (params?.limit !== undefined)       q.set('limit',       String(params.limit))
+  if (params?.department)                q.set('department',  params.department)
+  if (params?.category)                  q.set('category',    params.category)
+  if (params?.subcategory)               q.set('subcategory', params.subcategory)
+  if (params?.sort)                      q.set('sort',        params.sort)
+  if (params?.min_price !== undefined)   q.set('min_price',   String(params.min_price))
+  if (params?.max_price !== undefined)   q.set('max_price',   String(params.max_price))
+  if (params?.in_stock)                  q.set('in_stock',    'true')
+  if (params?.search)                    q.set('search',      params.search)
+  if (params?.size)                      q.set('size',        params.size)
+  if (params?.color)                     q.set('color',       params.color)
   return apiFetch(`/api/products?${q}`)
+}
+
+export const adminGetProducts = (params?: {
+  page?: number
+  limit?: number
+  search?: string
+  category?: string
+  brand?: string
+  is_active?: boolean
+}) => {
+  const q = new URLSearchParams()
+  if (params?.page !== undefined)      q.set('page',      String(params.page))
+  if (params?.limit !== undefined)     q.set('limit',     String(params.limit))
+  if (params?.search)                  q.set('search',    params.search)
+  if (params?.category)                q.set('category',  params.category)
+  if (params?.brand)                   q.set('brand',     params.brand)
+  if (params?.is_active !== undefined) q.set('is_active', String(params.is_active))
+  return adminFetch(`/api/admin/products?${q}`)
 }
 
 export const getProduct = (id: string) =>
@@ -95,8 +120,11 @@ export const getProduct = (id: string) =>
 export const searchProducts = (query: string, limit = 10) =>
   apiFetch(`/api/products/search?q=${encodeURIComponent(query)}&limit=${limit}`)
 
-export const getProductFilters = () =>
-  apiFetch('/api/products/filters')
+export const getProductFilters = (department?: string) => {
+  const q = new URLSearchParams()
+  if (department) q.set('department', department)
+  return apiFetch(`/api/products/filters?${q}`)
+}
 
 /* ─────────────────────────────────────────
    CART
@@ -104,10 +132,11 @@ export const getProductFilters = () =>
 
 export const getCart = () => userFetch('/api/cart')
 
-export const addToCart = (productId: string, quantity: number) =>
+// CHANGED: variantId instead of productId
+export const addToCart = (variantId: string, quantity: number) =>
   userFetch('/api/cart', {
     method: 'POST',
-    body: JSON.stringify({ product_id: productId, quantity }),
+    body: JSON.stringify({ variant_id: variantId, quantity }), 
   })
 
 export const updateCartItem = (itemId: string, quantity: number) =>
@@ -154,7 +183,7 @@ export const createOrder = (data: {
     pincode: string
   }
   notes?: string
-  shipping_amount: number // <--- ADD THIS
+  shipping_amount: number 
 }) =>
   userFetch('/api/orders', {
     method: 'POST',
@@ -188,7 +217,7 @@ export const verifyPayment = (data: {
   })
 
 /* ─────────────────────────────────────────
-   SHIPPING
+   SHIPPING (PUBLIC)
 ───────────────────────────────────────── */
 
 export const trackShipment = (orderId: string) =>
@@ -250,23 +279,8 @@ export const getDashboard = () =>
    ADMIN — PRODUCTS
 ───────────────────────────────────────── */
 
-export const adminGetProducts = (params?: {
-  page?: number
-  limit?: number
-  search?: string
-  category?: string
-  brand?: string
-  is_active?: boolean
-}) => {
-  const q = new URLSearchParams()
-  if (params?.page)      q.set('page',      String(params.page))
-  if (params?.limit)     q.set('limit',     String(params.limit))
-  if (params?.search)    q.set('search',    params.search)
-  if (params?.category)  q.set('category',  params.category)
-  if (params?.brand)     q.set('brand',     params.brand)
-  if (params?.is_active !== undefined) q.set('is_active', String(params.is_active))
-  return adminFetch(`/api/admin/products?${q}`)
-}
+export const getCategories = () => adminFetch('/api/admin/categories') // RESTORED THIS!
+
 
 export const adminGetProduct = (id: string) =>
   adminFetch(`/api/admin/products/${id}`)
@@ -415,3 +429,12 @@ export const getLabel = (shipmentId: string) =>
     method: 'POST',
     body: JSON.stringify({ shipment_id: shipmentId }),
   })
+
+// RESTORED THIS!
+export const schedulePickup = (orderId: string, shipmentId: string) => 
+  adminFetch('/api/admin/shipping/pickup', { 
+    method: 'POST', 
+    body: JSON.stringify({ order_id: orderId, shipment_id: shipmentId }) 
+  })
+
+export const getShippingQueue = () => adminFetch('/api/admin/shipping')

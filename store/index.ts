@@ -1,15 +1,24 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware' // Added persistence
+import { persist } from 'zustand/middleware'
 import {
   getCart, addToCart as apiAddToCart, updateCartItem, removeCartItem,
   getWishlist, addToWishlist, removeFromWishlist,
 } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
 
-/* --- Types remain the same --- */
+/* --- Types Updated for Variants --- */
 export interface CartItem {
-  id: string; productId: string; name: string; price: number; image: string; size?: string; qty: number;
+  id: string;         // The CartItem row ID
+  variantId: string;  // NEW: The specific physical item
+  productId: string;  // The parent blueprint
+  name: string; 
+  price: number; 
+  image: string; 
+  size?: string; 
+  color?: string;     // NEW
+  qty: number;
 }
+
 export interface WishItem {
   id: string; name: string; price: number; image: string; href: string;
 }
@@ -23,9 +32,9 @@ interface CartStore {
   openCart: () => void;
   closeCart: () => void;
   syncCart: () => Promise<void>;
-  addItem: (item: { id: string; name: string; price: number; image: string; size?: string }) => Promise<void>;
-  removeItem: (id: string, size?: string) => Promise<void>;
-  updateQty: (id: string, size: string | undefined, qty: number) => Promise<void>;
+  addItem: (item: { variantId: string; productId: string; name: string; price: number; image: string; size?: string; color?: string }) => Promise<void>;
+  removeItem: (variantId: string) => Promise<void>;
+  updateQty: (variantId: string, qty: number) => Promise<void>;
   totalItems: () => number;
   totalPrice: () => number;
   clear: () => void;
@@ -47,12 +56,14 @@ export const useCartStore = create<CartStore>()(
           if (res.success && res.cart?.items) {
             const dbItems = res.cart.items.map((i: any) => ({
               id: i.id,
-              productId: i.product?.id,
-              name: i.product?.name,
-              price: i.product?.base_price,
-              image: i.product?.images?.[0] || '',
+              variantId: i.variant_id || i.variant?.id,
+              productId: i.variant?.product_id || i.variant?.product?.id,
+              name: i.variant?.product?.name,
+              price: Number(i.variant?.base_price || 0), // Handle Decimal
+              image: i.variant?.product?.images?.[0] || '',
               qty: i.quantity,
-              size: i.size || undefined
+              size: i.variant?.size || undefined,
+              color: i.variant?.color || undefined
             }))
             set({ items: dbItems })
           }
@@ -63,35 +74,36 @@ export const useCartStore = create<CartStore>()(
 
       addItem: async (incoming) => {
         const items = get().items
-        const existing = items.find(i => i.productId === incoming.id && i.size === incoming.size)
+        // Find by exact Variant ID now!
+        const existing = items.find(i => i.variantId === incoming.variantId)
         
         // 1. Update UI Instantly (Optimistic)
         if (existing) {
           set({ items: items.map(i => i === existing ? { ...i, qty: i.qty + 1 } : i) })
         } else {
-          set({ items: [...items, { ...incoming, productId: incoming.id, id: `temp-${Date.now()}`, qty: 1 }] })
+          set({ items: [...items, { ...incoming, id: `temp-${Date.now()}`, qty: 1 }] })
         }
 
         // 2. Sync to DB if logged in
         try {
-          await apiAddToCart(incoming.id, 1) 
+          await apiAddToCart(incoming.variantId, 1) // Send variantId to backend
           get().syncCart() // Refresh IDs from DB
         } catch { /* Stay in guest mode */ }
       },
 
-      removeItem: async (id, size) => {
-        const item = get().items.find(i => i.productId === id && i.size === size)
+      removeItem: async (variantId) => {
+        const item = get().items.find(i => i.variantId === variantId)
         set({ items: get().items.filter(i => i !== item) })
         if (item && !item.id.startsWith('temp-')) {
           try { await removeCartItem(item.id) } catch {}
         }
       },
 
-      updateQty: async (id, size, qty) => {
+      updateQty: async (variantId, qty) => {
         const items = get().items
-        const item = items.find(i => i.productId === id && i.size === size)
+        const item = items.find(i => i.variantId === variantId)
         if (!item) return
-        if (qty <= 0) return get().removeItem(id, size)
+        if (qty <= 0) return get().removeItem(variantId)
 
         set({ items: items.map(i => i === item ? { ...i, qty } : i) })
         if (!item.id.startsWith('temp-')) {
@@ -104,8 +116,8 @@ export const useCartStore = create<CartStore>()(
       clear: () => set({ items: [] }),
     }),
     {
-      name: 'tfm-cart', // Browser storage key
-      partialize: (state) => ({ items: state.items }), // Only save items, not "isOpen"
+      name: 'tfm-cart',
+      partialize: (state) => ({ items: state.items }), 
     }
   )
 )
@@ -113,11 +125,12 @@ export const useCartStore = create<CartStore>()(
 /* ─────────────────────────────────────────
    WISHLIST STORE (Member + Guest Hybrid)
 ───────────────────────────────────────── */
+// (Wishlist stays the same because users wishlist the Parent Product, not a specific size)
 interface WishlistStore {
   items:          WishItem[];
-  isOpen:         boolean;           // <--- Added back
-  openWishlist:   () => void;        // <--- Added back
-  closeWishlist:  () => void;        // <--- Added back
+  isOpen:         boolean;           
+  openWishlist:   () => void;        
+  closeWishlist:  () => void;        
   syncWishlist:   () => Promise<void>;
   toggle:         (item: WishItem) => Promise<void>;
   has:            (id: string) => boolean;
@@ -127,10 +140,10 @@ export const useWishlistStore = create<WishlistStore>()(
   persist(
     (set, get) => ({
       items: [],
-      isOpen: false, // <--- Initial state
+      isOpen: false, 
 
-      openWishlist:  () => set({ isOpen: true }),  // <--- Implementation
-      closeWishlist: () => set({ isOpen: false }), // <--- Implementation
+      openWishlist:  () => set({ isOpen: true }),  
+      closeWishlist: () => set({ isOpen: false }), 
 
       syncWishlist: async () => {
         try {
@@ -139,7 +152,7 @@ export const useWishlistStore = create<WishlistStore>()(
             const dbItems = res.wishlist.items.map((i: any) => ({
               id: i.product?.id,
               name: i.product?.name,
-              price: i.product?.base_price,
+              price: Number(i.product?.variants?.[0]?.base_price || 0), // Read price from variant
               image: i.product?.images?.[0] || '',
               href: `/products/${i.product?.id}`
             }))
@@ -160,8 +173,6 @@ export const useWishlistStore = create<WishlistStore>()(
     }),
     { 
       name: 'tfm-wishlist',
-      // partialize ensures we don't save the 'isOpen' state to the browser,
-      // so the drawer is always closed when the page first loads.
       partialize: (state) => ({ items: state.items }),
     }
   )
@@ -171,11 +182,9 @@ export const useWishlistStore = create<WishlistStore>()(
    INITIALIZATION LOGIC
 ───────────────────────────────────────── */
 if (typeof window !== 'undefined') {
-  // 1. Run sync immediately on load in case user is already logged in
   useCartStore.getState().syncCart()
   useWishlistStore.getState().syncWishlist()
 
-  // 2. Listen for auth changes (Login/Logout)
   onAuthChange(user => {
     if (user) {
       useCartStore.getState().syncCart()

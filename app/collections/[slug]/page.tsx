@@ -20,8 +20,8 @@ const PRICE_RANGES = [
   { label: 'Above ₹1,500',      min: 1500, max: 99999 },
 ]
 
-// Map backend product → ProductCard shape
 function toCardProduct(p: any): Product {
+  // Since backend now sends parent with aggregated stock/price
   return {
     id:            p.slug || p.id,
     name:          p.name,
@@ -36,13 +36,13 @@ export default function CollectionPage() {
   const params = useParams()
   const rawSlug  = (params?.slug as string) ?? 'all'
   
-  // Dynamically derive the label and category from the slug
-  // e.g., 'mens-shirts' -> 'Mens Shirts'
   const deriveLabel = (s: string) => s === 'all' ? 'All Products' : s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const label = deriveLabel(rawSlug)
   
-  // For the API call, we use the derived label as the category string
-  const activeCategory = rawSlug === 'all' ? undefined : label
+  // NEW LOGIC: Differentiate between Department (Men/Women/Kids) vs Category (Shirts/Sarees)
+  const isDepartment = ['Women', 'Men', 'Kids'].includes(label)
+  const activeDepartment = isDepartment ? label.toUpperCase() : undefined
+  const activeCategory = !isDepartment && rawSlug !== 'all' ? label : undefined
 
   const [products,     setProducts]     = useState<Product[]>([])
   const [total,        setTotal]        = useState(0)
@@ -65,7 +65,8 @@ export default function CollectionPage() {
       const res = await getProducts({
         page:      pageNum,
         limit:     LIMIT,
-        category:  activeCategory, // Use the dynamically derived category
+        department: activeDepartment, // Pass department to API
+        category:  activeCategory,    // Pass category to API
         sort,
         in_stock:  inStock || undefined,
         min_price: priceRange?.min,
@@ -81,13 +82,12 @@ export default function CollectionPage() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [activeCategory, sort, inStock, priceRange])
+  }, [activeDepartment, activeCategory, sort, inStock, priceRange])
 
-  // Reset and fetch on filter/sort change
   useEffect(() => {
     setPage(1)
     fetchProducts(1, true)
-  }, [activeCategory, sort, inStock, priceRange])
+  }, [activeDepartment, activeCategory, sort, inStock, priceRange])
 
   const handleLoadMore = () => {
     const next = page + 1
@@ -99,12 +99,8 @@ export default function CollectionPage() {
 
   const FilterContent = () => (
     <div className="space-y-0 divide-y divide-gray-100">
-      {/* Price */}
       <div>
-        <button
-          onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')}
-          className="w-full flex items-center justify-between py-4 text-left"
-        >
+        <button onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')} className="w-full flex items-center justify-between py-4 text-left">
           <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Price</span>
           <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'price' ? 'rotate-180' : ''}`} />
         </button>
@@ -112,13 +108,8 @@ export default function CollectionPage() {
           <div className="pb-4 space-y-2.5">
             {PRICE_RANGES.map(r => (
               <label key={r.label} className="flex items-center gap-2.5 cursor-pointer group">
-                <div
-                  onClick={() => setPriceRange(
-                    priceRange?.min === r.min ? null : { min: r.min, max: r.max }
-                  )}
-                  className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer
-                    ${priceRange?.min === r.min ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}
-                >
+                <div onClick={() => setPriceRange(priceRange?.min === r.min ? null : { min: r.min, max: r.max })}
+                  className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${priceRange?.min === r.min ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
                   {priceRange?.min === r.min && <span className="text-white text-[10px] leading-none">✓</span>}
                 </div>
                 <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{r.label}</span>
@@ -127,24 +118,16 @@ export default function CollectionPage() {
           </div>
         )}
       </div>
-
-      {/* Availability */}
       <div>
-        <button
-          onClick={() => setOpenFilter(openFilter === 'avail' ? null : 'avail')}
-          className="w-full flex items-center justify-between py-4 text-left"
-        >
+        <button onClick={() => setOpenFilter(openFilter === 'avail' ? null : 'avail')} className="w-full flex items-center justify-between py-4 text-left">
           <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Availability</span>
           <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'avail' ? 'rotate-180' : ''}`} />
         </button>
         {openFilter === 'avail' && (
           <div className="pb-4 space-y-2.5">
             <label className="flex items-center gap-2.5 cursor-pointer group">
-              <div
-                onClick={() => setInStock(!inStock)}
-                className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer
-                  ${inStock ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}
-              >
+              <div onClick={() => setInStock(!inStock)}
+                className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${inStock ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
                 {inStock && <span className="text-white text-[10px] leading-none">✓</span>}
               </div>
               <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">In Stock Only</span>
@@ -159,7 +142,6 @@ export default function CollectionPage() {
 
   return (
     <div className="bg-white min-h-screen">
-      {/* Breadcrumb */}
       <div className="border-b border-gray-100">
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3">
           <p className="text-[11px] text-gray-400 tracking-wide">
@@ -170,49 +152,26 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Page header */}
       <div className="border-b border-gray-100">
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-6 flex items-end justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-[24px] font-light text-gray-900 tracking-wide">{label}</h1>
-            <p className="text-[12px] text-gray-400 mt-1">
-              {loading ? 'Loading...' : `${total} products`}
-            </p>
+            <p className="text-[12px] text-gray-400 mt-1">{loading ? 'Loading...' : `${total} products`}</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* Mobile filter */}
-            <button
-              onClick={() => setMobileFilter(true)}
-              className="lg:hidden flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 hover:border-gray-400 transition-colors"
-            >
-              <SlidersHorizontal size={13} />
-              Filter
-              {activeFilterCount > 0 && (
-                <span className="w-4 h-4 bg-gray-900 text-white text-[9px] rounded-full flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
+            <button onClick={() => setMobileFilter(true)} className="lg:hidden flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 hover:border-gray-400 transition-colors">
+              <SlidersHorizontal size={13} /> Filter
+              {activeFilterCount > 0 && <span className="w-4 h-4 bg-gray-900 text-white text-[9px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
             </button>
-
-            {/* Grid toggle */}
             <div className="hidden sm:flex gap-1 border border-gray-200 rounded-lg overflow-hidden">
               {([2, 3] as const).map(n => (
-                <button key={n} onClick={() => setCols(n)}
-                  className={`w-8 h-8 flex items-center justify-center transition-colors
-                    ${cols === n ? 'bg-gray-900 text-white' : 'text-gray-400 hover:bg-gray-50'}`}
-                >
+                <button key={n} onClick={() => setCols(n)} className={`w-8 h-8 flex items-center justify-center transition-colors ${cols === n ? 'bg-gray-900 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
                   {n === 2 ? <Grid size={13} /> : <LayoutGrid size={13} />}
                 </button>
               ))}
             </div>
-
-            {/* Sort */}
             <div className="relative">
-              <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                className="appearance-none pl-3.5 pr-8 h-9 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 bg-white cursor-pointer outline-none hover:border-gray-400 transition-colors"
-              >
+              <select value={sort} onChange={e => setSort(e.target.value)} className="appearance-none pl-3.5 pr-8 h-9 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 bg-white cursor-pointer outline-none hover:border-gray-400 transition-colors">
                 {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
               <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -221,38 +180,24 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Active filters */}
       {(priceRange || inStock) && (
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3 flex items-center gap-2 flex-wrap border-b border-gray-50">
           <span className="text-[11px] text-gray-400">Filters:</span>
           {priceRange && (
-            <button
-              onClick={() => setPriceRange(null)}
-              className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors"
-            >
+            <button onClick={() => setPriceRange(null)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
               {PRICE_RANGES.find(r => r.min === priceRange.min)?.label} <X size={10} />
             </button>
           )}
           {inStock && (
-            <button
-              onClick={() => setInStock(false)}
-              className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors"
-            >
+            <button onClick={() => setInStock(false)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
               In Stock <X size={10} />
             </button>
           )}
-          <button
-            onClick={() => { setPriceRange(null); setInStock(false) }}
-            className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1"
-          >
-            Clear all
-          </button>
+          <button onClick={() => { setPriceRange(null); setInStock(false) }} className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1">Clear all</button>
         </div>
       )}
 
-      {/* Main layout */}
       <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8 flex gap-8">
-        {/* Sidebar */}
         <aside className="hidden lg:block w-52 shrink-0">
           <div className="sticky top-28">
             <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gray-700 mb-4">Filter</p>
@@ -260,38 +205,22 @@ export default function CollectionPage() {
           </div>
         </aside>
 
-        {/* Products */}
         <div className="flex-1">
           {loading ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 size={28} className="animate-spin text-gray-300" />
-            </div>
+            <div className="flex items-center justify-center py-24"><Loader2 size={28} className="animate-spin text-gray-300" /></div>
           ) : products.length === 0 ? (
             <div className="text-center py-24">
               <p className="text-gray-400 text-[14px]">No products found</p>
-              <button
-                onClick={() => { setPriceRange(null); setInStock(false) }}
-                className="mt-4 text-[12px] text-gray-500 underline"
-              >
-                Clear filters
-              </button>
+              <button onClick={() => { setPriceRange(null); setInStock(false) }} className="mt-4 text-[12px] text-gray-500 underline">Clear filters</button>
             </div>
           ) : (
             <>
-              <div className={cols === 3
-                ? 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-4'
-                : 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-3'
-              }>
+              <div className={cols === 3 ? 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-4' : 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-3'}>
                 {products.map((p, i) => <ProductCard key={p.id} product={p} idx={i} />)}
               </div>
-
               {hasMore && (
                 <div className="text-center mt-12">
-                  <button
-                    onClick={handleLoadMore}
-                    disabled={loadingMore}
-                    className="px-10 py-3 border border-gray-300 text-[12px] tracking-[0.15em] uppercase font-medium text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 mx-auto"
-                  >
+                  <button onClick={handleLoadMore} disabled={loadingMore} className="px-10 py-3 border border-gray-300 text-[12px] tracking-[0.15em] uppercase font-medium text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 mx-auto">
                     {loadingMore && <Loader2 size={13} className="animate-spin" />}
                     {loadingMore ? 'Loading...' : 'Load More'}
                   </button>
@@ -302,27 +231,16 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {/* Mobile filter drawer */}
       {mobileFilter && (
         <>
           <div className="fixed inset-0 z-[80] bg-black/30" onClick={() => setMobileFilter(false)} />
-          <div
-            className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto px-5 pt-5 pb-8"
-            style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.10)' }}
-          >
+          <div className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto px-5 pt-5 pb-8" style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.10)' }}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-[14px] font-semibold text-gray-900">Filter Products</p>
-              <button onClick={() => setMobileFilter(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">
-                <X size={16} className="text-gray-500" />
-              </button>
+              <button onClick={() => setMobileFilter(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"><X size={16} className="text-gray-500" /></button>
             </div>
             <FilterContent />
-            <button
-              onClick={() => setMobileFilter(false)}
-              className="w-full mt-5 py-3.5 bg-gray-900 text-white text-[13px] font-medium rounded-xl hover:bg-gray-800 transition-colors"
-            >
-              Apply Filters
-            </button>
+            <button onClick={() => setMobileFilter(false)} className="w-full mt-5 py-3.5 bg-gray-900 text-white text-[13px] font-medium rounded-xl hover:bg-gray-800 transition-colors">Apply Filters</button>
           </div>
         </>
       )}

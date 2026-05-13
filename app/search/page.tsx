@@ -13,8 +13,8 @@ function toCard(p: any) {
   return {
     id:            p.slug || p.id,
     name:          p.name,
-    price:         p.base_price,
-    originalPrice: p.original_price ?? undefined,
+    price:         Number(p.base_price), // FIXED: Safety for Decimal
+    originalPrice: p.original_price ? Number(p.original_price) : undefined,
     image:         p.images?.[0] || '',
     href:          `/products/${p.slug || p.id}`,
   }
