@@ -6,6 +6,7 @@ import { useCartStore } from '@/store'
 import Image from 'next/image'
 
 export default function CartPage() {
+  // CHANGED: items now contain variantId and productId
   const { items, removeItem, updateQty, totalItems, totalPrice } = useCartStore()
   
   const subtotal = totalPrice()
@@ -49,9 +50,11 @@ export default function CartPage() {
           {/* Items list */}
           <div className="lg:col-span-2 space-y-3">
             {items.map((item) => (
-              <div key={`${item.productId}-${item.size}`}
+              // FIXED: Key now uses the unique variantId
+              <div key={item.variantId}
                 className="flex gap-4 p-4 border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors"
               >
+                {/* Link still goes to the parent Product Page */}
                 <Link href={`/products/${item.productId}`}
                   className="w-20 h-24 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 flex items-center justify-center"
                 >
@@ -66,24 +69,30 @@ export default function CartPage() {
                   <Link href={`/products/${item.productId}`} className="text-[13.5px] font-medium text-gray-800 hover:text-gray-900 transition-colors block leading-snug mb-1">
                     {item.name}
                   </Link>
-                  {item.size && <p className="text-[11.5px] text-gray-400 mb-1.5">Size: {item.size}</p>}
-                  <p className="text-[15px] font-semibold text-gray-900">₹{item.price.toLocaleString('en-IN')}</p>
+                  <div className="flex flex-wrap gap-x-3 mb-1.5">
+                    {item.size && <p className="text-[11.5px] text-gray-400">Size: {item.size}</p>}
+                    {item.color && <p className="text-[11.5px] text-gray-400">Color: {item.color}</p>}
+                  </div>
+                  <p className="text-[15px] font-semibold text-gray-900">₹{Number(item.price).toLocaleString('en-IN')}</p>
 
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-0 border border-gray-200 rounded-lg">
-                      <button onClick={() => updateQty(item.productId, item.size, item.qty - 1)}
+                      {/* FIXED: updateQty now takes 2 arguments: (variantId, newQty) */}
+                      <button onClick={() => updateQty(item.variantId, item.qty - 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-l-lg transition-colors text-gray-500"
                       >
                         <Minus size={11} />
                       </button>
                       <span className="w-8 text-center text-[13px] font-medium">{item.qty}</span>
-                      <button onClick={() => updateQty(item.productId, item.size, item.qty + 1)}
+                      {/* FIXED: updateQty now takes 2 arguments: (variantId, newQty) */}
+                      <button onClick={() => updateQty(item.variantId, item.qty + 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-r-lg transition-colors text-gray-500"
                       >
                         <Plus size={11} />
                       </button>
                     </div>
-                    <button onClick={() => removeItem(item.productId, item.size)}
+                    {/* FIXED: removeItem now takes 1 argument: (variantId) */}
+                    <button onClick={() => removeItem(item.variantId)}
                       className="flex items-center gap-1 text-[11.5px] text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <Trash2 size={12} /> Remove
@@ -93,7 +102,7 @@ export default function CartPage() {
 
                 <div className="text-right shrink-0 hidden sm:block">
                   <p className="text-[14px] font-semibold text-gray-900">
-                    ₹{(item.price * item.qty).toLocaleString('en-IN')}
+                    ₹{(Number(item.price) * item.qty).toLocaleString('en-IN')}
                   </p>
                 </div>
               </div>
@@ -114,18 +123,19 @@ export default function CartPage() {
                 <span>₹{subtotal.toLocaleString('en-IN')}</span>
               </div>
               <p className="text-[11.5px] text-gray-400 leading-relaxed italic">
-                Shipping and taxes will be calculated at checkout based on your delivery address.
+                Shipping will be calculated at checkout based on your delivery address.
               </p>
             </div>
 
             <Link href="/checkout"
-              className="block w-full text-center py-3.5 bg-gray-900 text-white text-[13px] font-medium tracking-[0.06em] rounded-xl hover:bg-gray-800 transition-colors mb-3"
+              className="block w-full text-center py-3.5 bg-gray-900 text-white text-[13px] font-medium tracking-[0.06em] rounded-xl hover:bg-gray-800 transition-colors mb-3 shadow-lg shadow-black/10"
             >
               Proceed to Checkout
             </Link>
 
-            <div className="flex items-center justify-center gap-2 text-[11px] text-gray-400">
-              <span>💳</span> Secured Checkout & Fast Delivery
+            <div className="text-center space-y-2 mt-6">
+               <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Store Policies</p>
+               <p className="text-[10px] text-gray-400 leading-tight">No COD · No Returns · No Cancellations</p>
             </div>
           </div>
         </div>
