@@ -21,14 +21,23 @@ const PRICE_RANGES = [
 ]
 
 function toCardProduct(p: any): Product {
-  // Since backend now sends parent with aggregated stock/price
+  // 🔥 SMART CHECK: Handles both flattened responses and nested variant arrays
+  const variants = p.variants || []
+  const stock = p.stock !== undefined 
+    ? p.stock 
+    : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+    
+  const price = p.base_price !== undefined 
+    ? p.base_price 
+    : (variants[0]?.base_price || 0)
+
   return {
-    id:            p.slug || p.id,
+    id:            p.id, // Better to use the true ID for React keys
     name:          p.name,
-    price:         p.base_price,
+    price:         Number(price), // Safely convert Decimal to Number
     image:         p.images?.[0] || '',
     href:          `/products/${p.slug || p.id}`,
-    badge:         p.stock === 0 ? 'Sold Out' : undefined,
+    badge:         stock <= 0 ? 'Sold Out' : undefined,
   }
 }
 
@@ -39,7 +48,7 @@ export default function CollectionPage() {
   const deriveLabel = (s: string) => s === 'all' ? 'All Products' : s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const label = deriveLabel(rawSlug)
   
-  // NEW LOGIC: Differentiate between Department (Men/Women/Kids) vs Category (Shirts/Sarees)
+  // Differentiate between Department (Men/Women/Kids) vs Category (Shirts/Sarees)
   const isDepartment = ['Women', 'Men', 'Kids'].includes(label)
   const activeDepartment = isDepartment ? label.toUpperCase() : undefined
   const activeCategory = !isDepartment && rawSlug !== 'all' ? label : undefined
@@ -65,8 +74,8 @@ export default function CollectionPage() {
       const res = await getProducts({
         page:      pageNum,
         limit:     LIMIT,
-        department: activeDepartment, // Pass department to API
-        category:  activeCategory,    // Pass category to API
+        department: activeDepartment,
+        category:  activeCategory, 
         sort,
         in_stock:  inStock || undefined,
         min_price: priceRange?.min,
@@ -87,7 +96,7 @@ export default function CollectionPage() {
   useEffect(() => {
     setPage(1)
     fetchProducts(1, true)
-  }, [activeDepartment, activeCategory, sort, inStock, priceRange])
+  }, [fetchProducts]) // 🔥 FIXED: Added fetchProducts to dependency array
 
   const handleLoadMore = () => {
     const next = page + 1
