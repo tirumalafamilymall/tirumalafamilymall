@@ -86,10 +86,16 @@ export default function ProductPage() {
   // --- VARIANT LOGIC ---
   const variants = product?.variants || []
   
-  // Extract unique sizes and colors available for this product
-  const availableSizes = Array.from(new Set(variants.map((v: any) => v.size).filter(Boolean))) as string[]
-  const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
+ // 1. Extract ALL unique colors first
+const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
 
+// 2. 🔥 SMART FILTER: Only show sizes that actually exist for the SELECTED color
+const availableSizes = variants
+  .filter((v: any) => !selectedColor || v.color === selectedColor)
+  .map((v: any) => v.size)
+  .filter(Boolean)
+  .filter((value: any, index: any, self: any) => self.indexOf(value) === index) // Unique
+  
   // Find the exact variant the user has selected (or default to the first one)
   const activeVariant = variants.find((v: any) => 
     (availableSizes.length === 0 || v.size === selectedSize) &&
