@@ -17,20 +17,18 @@ export default function QuickViewModal({
   const [activeImg, setActiveImg] = useState(0)
   const [selectedSize, setSelectedSize] = useState<string | null>(null)
   const [error, setError] = useState(false)
-const [recent, setRecent] = useState<any[]>([])
+  const [recent, setRecent] = useState<any[]>([])
 
   const { addItem, openCart } = useCartStore()
   const { toggle, has } = useWishlistStore()
 
-
-
-
   useEffect(() => {
-  setRecent(getRecent())
-}, [])
+    setRecent(getRecent())
+  }, [])
 
   if (!product) return null
-const filteredRecent = recent.filter(p => p.id !== product.id)
+  
+  const filteredRecent = recent.filter(p => p.id !== product.id)
   const images = [product.image, product.image, product.image]
 
   return (
@@ -54,14 +52,14 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
         {/* WISHLIST */}
         <button
           onClick={() =>
-  toggle({
-    id: product.id,
-    name: product.name,
-    price: product.price,
-    image: product.image,
-    href: product.href,
-  })
-}
+            toggle({
+              id: product.id,
+              name: product.name,
+              price: product.price,
+              image: product.image,
+              href: product.href,
+            })
+          }
           className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center hover:scale-110 transition"
         >
           <Heart
@@ -79,6 +77,7 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
               <img
                 src={images[activeImg]}
                 className="max-h-[90%] max-w-[90%] object-contain"
+                alt="Product"
               />
             </div>
           </div>
@@ -95,6 +94,7 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
                     ? 'border-black scale-105'
                     : 'border-gray-200'
                 }`}
+                alt="Thumbnail"
               />
             ))}
           </div>
@@ -115,13 +115,12 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
             </div>
 
             <p className="text-[22px] font-semibold mb-3">
-              ₹{product.price.toLocaleString('en-IN')}
+              ₹{Number(product.price).toLocaleString('en-IN')}
             </p>
 
             <div className="flex gap-4 text-xs text-gray-500 mb-5">
               <span>✓ Premium</span>
-              <span>✓ Free Shipping</span>
-              <span>✓ Easy Returns</span>
+              <span>✓ Fast Delivery</span>
             </div>
 
             <p className="text-gray-500 text-sm mb-5">
@@ -177,13 +176,18 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
                     return
                   }
 
-                 addItem({
-  id: product.id,
-  name: product.name,
-  price: product.price,
-  image: product.image,
-  size: (product.hasSizes ?? true) ? selectedSize || undefined : undefined,
-})
+                  const chosenSize = (product.hasSizes ?? true) ? selectedSize || undefined : undefined;
+
+                  // 🔥 FIXED: Now supplies variantId and productId to satisfy TypeScript
+                  addItem({
+                    variantId: `${product.id}-${chosenSize || 'base'}`, // Composite fallback ID
+                    productId: product.id,
+                    name: product.name,
+                    price: Number(product.price),
+                    image: product.image,
+                    size: chosenSize,
+                    color: undefined // Quick view doesn't have color selection yet
+                  })
 
                   openCart()
                 }}
@@ -201,7 +205,7 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
             </div>
 
             {/* RECENT */}
-            {recent.length > 0 && (
+            {filteredRecent.length > 0 && (
               <div>
                 <p className="text-[11px] tracking-widest text-gray-400 mb-2">
                   Recently Viewed
@@ -212,6 +216,7 @@ const filteredRecent = recent.filter(p => p.id !== product.id)
                       key={item.id}
                       src={item.image}
                       className="w-14 h-16 object-cover rounded-md"
+                      alt="Recent"
                     />
                   ))}
                 </div>

@@ -1,13 +1,11 @@
 'use client'
 
-import { X, Heart, ShoppingBag } from 'lucide-react'
+import { X, Heart, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { useWishlistStore, useCartStore } from '@/store'
+import { useWishlistStore } from '@/store'
 
 export default function WishlistDrawer() {
   const { items, isOpen, closeWishlist, toggle } = useWishlistStore()
-  const addToCart = useCartStore(s => s.addItem)
-  const openCart = useCartStore(s => s.openCart)
 
   if (!isOpen) return null
 
@@ -46,24 +44,27 @@ export default function WishlistDrawer() {
           ) : (
             items.map(item => (
               <div key={item.id} className="flex gap-3 py-3 border-b border-gray-50">
-                <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center shrink-0">
-                  <span className="text-2xl opacity-30">👗</span>
+                <div className="w-16 h-20 bg-gray-100 rounded flex items-center justify-center shrink-0 overflow-hidden">
+                  {item.image ? (
+                     <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  ) : (
+                     <span className="text-2xl opacity-30">👗</span>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <Link href={item.href} onClick={closeWishlist} className="text-sm font-medium text-gray-900 hover:text-black line-clamp-2 leading-snug block">{item.name}</Link>
-                  <p className="text-sm font-semibold text-gray-900 mt-1.5">₹{item.price.toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1.5">₹{Number(item.price).toLocaleString('en-IN')}</p>
+                  
                   <div className="flex items-center gap-2 mt-2.5">
-                    <button
-                      onClick={() => {
-                        addToCart({ id: item.id, name: item.name, price: item.price, image: item.image })
-                        openCart()
-                        closeWishlist()
-                      }}
-                      className="flex items-center gap-1.5 text-xs text-white bg-black px-3 py-1.5 rounded hover:bg-gray-700 transition-colors"
+                    {/* CHANGED: Redirects to product page to select variants instead of forcing cart add */}
+                    <Link
+                      href={item.href}
+                      onClick={closeWishlist}
+                      className="flex flex-1 items-center justify-center gap-1.5 text-xs text-gray-700 bg-gray-50 border border-gray-200 px-3 py-2 rounded hover:bg-black hover:text-white hover:border-black transition-colors"
                     >
-                      <ShoppingBag size={11} /> Add to Cart
-                    </button>
-                    <button onClick={() => toggle(item)} className="text-gray-300 hover:text-red-400 transition-colors">
+                      Select Options <ArrowRight size={11} />
+                    </Link>
+                    <button onClick={() => toggle(item)} className="p-2 text-gray-300 hover:text-red-400 border border-transparent hover:bg-red-50 hover:border-red-100 rounded transition-colors">
                       <X size={14} />
                     </button>
                   </div>
