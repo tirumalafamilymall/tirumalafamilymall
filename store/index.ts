@@ -32,7 +32,8 @@ interface CartStore {
   openCart: () => void;
   closeCart: () => void;
   syncCart: () => Promise<void>;
-  addItem: (item: { variantId: string; productId: string; name: string; price: number; image: string; size?: string; color?: string }) => Promise<void>;
+  // 🔥 FIX 1: Added qty to the expected payload
+  addItem: (item: { variantId: string; productId: string; name: string; price: number; image: string; size?: string; color?: string; qty: number }) => Promise<void>;
   removeItem: (variantId: string) => Promise<void>;
   updateQty: (variantId: string, qty: number) => Promise<void>;
   totalItems: () => number;
@@ -59,7 +60,6 @@ export const useCartStore = create<CartStore>()(
               productId: i.variant?.product_id || i.variant?.product?.id,
               name: i.variant?.product?.name,
               price: Number(i.variant?.base_price || 0),
-              // ✅ FIX: Check variant.image first, then fall back to parent product images
               image: i.variant?.image || i.variant?.product?.images?.[0] || '',
               qty: i.quantity,
               size: i.variant?.size || undefined,
@@ -78,14 +78,17 @@ export const useCartStore = create<CartStore>()(
         
         // 1. Update UI Instantly (Optimistic)
         if (existing) {
-          set({ items: items.map(i => i === existing ? { ...i, qty: i.qty + 1 } : i) })
+          // 🔥 FIX 2: Add incoming.qty instead of hardcoding +1
+          set({ items: items.map(i => i === existing ? { ...i, qty: i.qty + incoming.qty } : i) })
         } else {
-          set({ items: [...items, { ...incoming, id: `temp-${Date.now()}`, qty: 1 }] })
+          // 🔥 FIX 3: Use incoming.qty instead of hardcoding 1
+          set({ items: [...items, { ...incoming, id: `temp-${Date.now()}`, qty: incoming.qty }] })
         }
 
         // 2. Sync to DB if logged in
         try {
-          await apiAddToCart(incoming.variantId, 1)
+          // 🔥 FIX 4: Pass incoming.qty to the backend instead of hardcoding 1
+          await apiAddToCart(incoming.variantId, incoming.qty)
           get().syncCart()
         } catch { /* Stay in guest mode */ }
       },
@@ -151,8 +154,6 @@ export const useWishlistStore = create<WishlistStore>()(
               id: i.product?.id,
               name: i.product?.name,
               price: Number(i.product?.variants?.[0]?.base_price || 0),
-              // ✅ FIX: Check variant.image first, then fall back to parent product images
-              // This fixes the "image flashes then disappears" bug for Excel-uploaded products
               image: i.product?.variants?.find((v: any) => v.image)?.image
                      || i.product?.images?.[0]
                      || '',

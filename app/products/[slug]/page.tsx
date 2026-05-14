@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, Share2, Loader2 } from 'lucide-react'
+import { Heart, Share2, Loader2, Plus, Minus } from 'lucide-react' // 🔥 Added Plus and Minus icons
 
 import { getProduct, getProducts, addToWishlist, removeFromWishlist } from '@/lib/api'
 import { useCartStore, useWishlistStore } from '@/store'
@@ -31,6 +31,9 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [selectionError, setSelectionError] = useState(false)
   
+  // 🔥 NEW STATE: Quantity tracker
+  const [quantity, setQuantity] = useState(1)
+
   const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
   const [added, setAdded] = useState(false)
@@ -79,14 +82,12 @@ export default function ProductPage() {
     .filter(Boolean)
     .filter((val: any, idx: any, self: any) => self.indexOf(val) === idx)
 
-  // 🔥 AUTO-SELECT 1: Pick the first color instantly
   useEffect(() => {
     if (availableColors.length > 0 && !selectedColor) {
       setSelectedColor(availableColors[0])
     }
   }, [availableColors, selectedColor])
 
-  // 🔥 AUTO-SELECT 2: Pick the first size instantly, or switch it if the user clicks a new color
   useEffect(() => {
     if (availableSizes.length > 0) {
       if (!selectedSize || !availableSizes.includes(selectedSize)) {
@@ -119,6 +120,13 @@ export default function ProductPage() {
     (availableSizes.length === 0 || v.size === selectedSize) &&
     (availableColors.length === 0 || v.color === selectedColor)
   )
+
+  // 🔥 SAFETY FIX: Reset quantity to 1 if the user changes color or size 
+  // so they don't accidentally try to order 5 of a new variant that only has 2 in stock
+  useEffect(() => {
+    setQuantity(1)
+  }, [activeVariant?.id])
+
   const displayPrice = activeVariant ? Number(activeVariant.base_price) : (variants[0] ? Number(variants[0].base_price) : 0)
 
   const parentImages = product?.images || []
@@ -146,6 +154,7 @@ export default function ProductPage() {
         image: activeVariant.image || displayImage, 
         size: activeVariant.size || undefined,
         color: activeVariant.color || undefined,
+        qty: quantity, // 🔥 PASSING THE SELECTED QUANTITY TO THE STORE
       })
       if (redirectCheckout) router.push('/checkout')
       else { setAdded(true); openCart(); setTimeout(() => setAdded(false), 2000) }
@@ -161,6 +170,14 @@ export default function ProductPage() {
     } catch (e) { console.error("Wishlist sync failed") }
   }
 
+  // Quantity Handlers
+  const increaseQty = () => {
+    if (quantity < displayStock) setQuantity(prev => prev + 1)
+  }
+  const decreaseQty = () => {
+    if (quantity > 1) setQuantity(prev => prev - 1)
+  }
+
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
   if (!product) return <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-500 gap-4"><h2 className="text-2xl font-serif">Product Not Found</h2><Link href="/products" className="px-6 py-2 bg-black text-white rounded-full text-sm">Return to Shop</Link></div>
 
@@ -171,7 +188,6 @@ export default function ProductPage() {
           <div className="max-w-[1400px] mx-auto px-6 py-3 text-[11px] text-gray-400 uppercase tracking-wider flex items-center flex-wrap gap-2">
             <Link href="/" className="hover:text-black">Home</Link> <span className="text-gray-300">/</span> 
             <Link href={`/collections/${product.department?.toLowerCase()}`} className="hover:text-black"> {product.department} </Link> <span className="text-gray-300">/</span> 
-            {/* 🔥 ADDED SUBCATEGORY TO BREADCRUMBS */}
             {product.subcategory && (
               <>
                 <span className="text-gray-500">{product.subcategory}</span> <span className="text-gray-300">/</span> 
@@ -192,7 +208,6 @@ export default function ProductPage() {
             </div>
 
             <div className="bg-[#fafafa] rounded-2xl p-6 lg:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] lg:sticky lg:top-[100px]">
-              {/* 🔥 ADDED BRAND NAME TO UI */}
               {product.brand && (
                 <p className="text-[12px] font-semibold text-gray-500 tracking-[0.2em] uppercase mb-2">
                   {product.brand}
@@ -206,7 +221,6 @@ export default function ProductPage() {
                 </button>
               </div>
 
-              {/* 🔥 CLEANED UP STOCK LINE (Removed fake stars) */}
               <div className="mt-3">
                 <span className={`text-[13px] font-medium ${isOutOfStock ? 'text-red-500' : 'text-gray-500'}`}>
                   {isOutOfStock ? 'Out of Stock' : `${displayStock} in Stock`}
@@ -250,6 +264,24 @@ export default function ProductPage() {
                         {s}
                       </button>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 🔥 NEW: QUANTITY SELECTOR */}
+              {!isOutOfStock && (
+                <div className="mt-8">
+                  <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3">Quantity</p>
+                  <div className="flex items-center gap-0 border border-gray-300 w-max rounded-xl overflow-hidden bg-white">
+                    <button onClick={decreaseQty} disabled={quantity <= 1} 
+                      className="w-12 h-12 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 text-gray-600 transition-colors">
+                      <Minus size={14} />
+                    </button>
+                    <span className="w-12 text-center text-[15px] font-medium text-gray-900">{quantity}</span>
+                    <button onClick={increaseQty} disabled={quantity >= displayStock} 
+                      className="w-12 h-12 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50 text-gray-600 transition-colors">
+                      <Plus size={14} />
+                    </button>
                   </div>
                 </div>
               )}
