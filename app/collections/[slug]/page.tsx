@@ -1,277 +1,264 @@
 'use client'
-import { useRef, useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, Share2, Star, Loader2 } from 'lucide-react'
+import { SlidersHorizontal, ChevronDown, X, Grid, LayoutGrid, Loader2 } from 'lucide-react'
+import ProductCard, { Product } from '@/components/ProductCard'
+import { getProducts } from '@/lib/api'
 
-import { getProduct, getProducts, addToWishlist, removeFromWishlist } from '@/lib/api'
-import { useCartStore, useWishlistStore } from '@/store'
-import { addToRecent } from '@/lib/recent'
-import { Product as StoreProduct } from '@/components/ProductCard'
-
-const DETAILS = [
-  { q: 'Description', a: 'Premium quality product crafted with care. Perfect for your collection.' },
-  { q: 'Shipping & Policies', a: 'Standard shipping rates apply. Note: We do not offer Cash on Delivery (COD), returns, refunds, or order cancellations once placed.' },
+const SORT_OPTIONS = [
+  { label: 'Newest First',      value: 'newest' },
+  { label: 'Price: Low to High',  value: 'price_asc' },
+  { label: 'Price: High to Low',  value: 'price_desc' },
 ]
 
-export default function ProductPage() {
-  const router = useRouter()
+const PRICE_RANGES = [
+  { label: 'Under ₹500',        min: 0,    max: 499  },
+  { label: '₹500 – ₹1,000',    min: 500,  max: 1000 },
+  { label: '₹1,000 – ₹1,500',  min: 1000, max: 1500 },
+  { label: 'Above ₹1,500',      min: 1500, max: 99999 },
+]
+
+function toCardProduct(p: any): Product {
+  const variants = p.variants || []
+  const stock = p.stock !== undefined 
+    ? p.stock 
+    : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+    
+  const price = p.base_price !== undefined 
+    ? p.base_price 
+    : (variants[0]?.base_price || 0)
+
+  // Extract the variant image so it doesn't return undefined
+  const variantImage = variants.find((v: any) => v.image)?.image;
+
+  return {
+    id:            p.id, 
+    name:          p.name,
+    price:         Number(price), 
+    // 🔥 Guaranteeing a string to satisfy TypeScript
+    image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
+    images:        p.images || [], 
+    variants:      variants,       
+    // 🔥 Guaranteeing a string to satisfy TypeScript
+    href:          `/products/${p.slug || p.id}`,
+    badge:         stock <= 0 ? 'Sold Out' : undefined,
+  }
+}
+
+export default function CollectionPage() {
   const params = useParams()
-  const productId = params.slug as string || params.id as string 
-
-  const { addItem, openCart } = useCartStore()
-  const { toggle, has } = useWishlistStore()
-
-  const [product, setProduct] = useState<any>(null)
-  const [related, setRelated] = useState<any[]>([])
-  const [recent, setRecent] = useState<StoreProduct[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const [selectedSize, setSelectedSize] = useState<string | null>(null)
-  const [selectedColor, setSelectedColor] = useState<string | null>(null)
-  const [selectionError, setSelectionError] = useState(false)
+  const rawSlug  = (params?.slug as string) ?? 'all'
   
-  const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null)
-  const [zoomOpen, setZoomOpen] = useState(false)
-  const [added, setAdded] = useState(false)
-  const [showShare, setShowShare] = useState(false)
-  const [isAdding, setIsAdding] = useState(false)
-
-  useEffect(() => {
-    async function loadData() {
-      setLoading(true)
-      try {
-        const res = await getProduct(productId)
-        const p = res.product || res
-        setProduct(p)
-
-        if (p) {
-          const recentPayload = { id: p.id, name: p.name, price: p.variants?.[0]?.base_price || 0, image: p.images?.[0] }
-          setRecent(addToRecent(recentPayload))
-        }
-
-        if (p.category) {
-          const relRes = await getProducts({ category: p.category, limit: 8 })
-          const relatedItems = (relRes.products || relRes).filter((item: any) => item.id !== p.id)
-          setRelated(relatedItems)
-        }
-      } catch (error) {
-        console.error("Failed to load product:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
-  }, [productId])
-
-  // --- VARIANT LOGIC ---
-  const variants = product?.variants || []
+  const deriveLabel = (s: string) => s === 'all' ? 'All Products' : s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+  const label = deriveLabel(rawSlug)
   
-  const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
+  // Differentiate between Department (Men/Women/Kids) vs Category (Shirts/Sarees)
+  const isDepartment = ['Women', 'Men', 'Kids'].includes(label)
+  const activeDepartment = isDepartment ? label.toUpperCase() : undefined
+  const activeCategory = !isDepartment && rawSlug !== 'all' ? label : undefined
 
-  // 🔥 UX FIX: Auto-select color if there is only 1 available
-  useEffect(() => {
-    if (availableColors.length === 1 && !selectedColor) {
-      setSelectedColor(availableColors[0])
-    }
-  }, [availableColors, selectedColor])
+  const [products,     setProducts]     = useState<Product[]>([])
+  const [total,        setTotal]        = useState(0)
+  const [page,         setPage]         = useState(1)
+  const [loading,      setLoading]      = useState(true)
+  const [loadingMore,  setLoadingMore]  = useState(false)
+  const [sort,         setSort]         = useState('newest')
+  const [inStock,      setInStock]      = useState(false)
+  const [priceRange,   setPriceRange]   = useState<{ min: number; max: number } | null>(null)
+  const [mobileFilter, setMobileFilter] = useState(false)
+  const [cols,         setCols]         = useState<2 | 3>(2)
+  const [openFilter,   setOpenFilter]   = useState<string | null>('price')
 
-  const availableSizes = variants
-    .filter((v: any) => !selectedColor || v.color === selectedColor)
-    .map((v: any) => v.size)
-    .filter(Boolean)
-    .filter((val: any, idx: any, self: any) => self.indexOf(val) === idx)
+  const LIMIT = 20
 
-  // Watch color selection to change image
-  useEffect(() => {
-    if (selectedColor) {
-      const match = variants.find((v: any) => v.color === selectedColor && v.image)
-      if (match) setVariantImageOverride(match.image)
-    }
-  }, [selectedColor, variants])
-
-
-  // 🔥 STOCK CALCULATION FIX: Waterfall filtering
-  let filteredVariants = variants;
-  if (selectedColor) {
-    filteredVariants = filteredVariants.filter((v: any) => v.color === selectedColor);
-  }
-  if (selectedSize) {
-    filteredVariants = filteredVariants.filter((v: any) => v.size === selectedSize);
-  }
-  
-  const displayStock = filteredVariants.reduce((sum: number, v: any) => sum + Number(v.stock || 0), 0);
-  const isOutOfStock = displayStock <= 0;
-
-  // Price logic
-  const activeVariant = variants.find((v: any) => 
-    (availableSizes.length === 0 || v.size === selectedSize) &&
-    (availableColors.length === 0 || v.color === selectedColor)
-  )
-  const displayPrice = activeVariant ? Number(activeVariant.base_price) : (variants[0] ? Number(variants[0].base_price) : 0)
-
-  // Image building
-  const parentImages = product?.images || []
-  const variantImages = variants.map((v: any) => v.image).filter(Boolean)
-  const allImages = Array.from(new Set([...parentImages, ...variantImages])) 
-  const displayImage = variantImageOverride || allImages[0] || 'https://placehold.co/800x1000?text=No+Image'
-
-  const handleAddToCart = async (redirectCheckout = false) => {
-    if ((availableSizes.length > 0 && !selectedSize) || (availableColors.length > 0 && !selectedColor)) {
-      setSelectionError(true)
-      return
-    }
-    if (!activeVariant) {
-      alert("Combination unavailable.")
-      return
-    }
-    setSelectionError(false)
-    setIsAdding(true)
+  const fetchProducts = useCallback(async (pageNum: number, replace: boolean) => {
     try {
-      await addItem({
-        variantId: activeVariant.id,
-        productId: product.id,
-        name: product.name,
-        price: displayPrice,
-        image: activeVariant.image || displayImage, 
-        size: activeVariant.size || undefined,
-        color: activeVariant.color || undefined,
+      replace ? setLoading(true) : setLoadingMore(true)
+
+      const res = await getProducts({
+        page:      pageNum,
+        limit:     LIMIT,
+        department: activeDepartment,
+        category:  activeCategory, 
+        sort,
+        in_stock:  inStock || undefined,
+        min_price: priceRange?.min,
+        max_price: priceRange?.max === 99999 ? undefined : priceRange?.max,
       })
-      if (redirectCheckout) router.push('/checkout')
-      else { setAdded(true); openCart(); setTimeout(() => setAdded(false), 2000) }
-    } catch (error) { alert("Failed to add to cart.") } finally { setIsAdding(false) }
+
+      const mapped = (res.products || []).map(toCardProduct)
+      setProducts(prev => replace ? mapped : [...prev, ...mapped])
+      setTotal(res.total || 0)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+      setLoadingMore(false)
+    }
+  }, [activeDepartment, activeCategory, sort, inStock, priceRange])
+
+  useEffect(() => {
+    setPage(1)
+    fetchProducts(1, true)
+  }, [fetchProducts])
+
+  const handleLoadMore = () => {
+    const next = page + 1
+    setPage(next)
+    fetchProducts(next, false)
   }
 
-  const handleWishlist = async () => {
-    const storePayload = { id: product.id, name: product.name, price: displayPrice, image: displayImage, href: `/products/${product.id}` }
-    toggle(storePayload)
-    try {
-      if (has(product.id)) await removeFromWishlist(product.id)
-      else await addToWishlist(product.id)
-    } catch (e) { console.error("Wishlist sync failed") }
-  }
+  const hasMore = products.length < total
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-white"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>
-  if (!product) return <div className="min-h-screen flex flex-col items-center justify-center bg-white text-gray-500 gap-4"><h2 className="text-2xl font-serif">Product Not Found</h2><Link href="/products" className="px-6 py-2 bg-black text-white rounded-full text-sm">Return to Shop</Link></div>
+  const FilterContent = () => (
+    <div className="space-y-0 divide-y divide-gray-100">
+      <div>
+        <button onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')} className="w-full flex items-center justify-between py-4 text-left">
+          <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Price</span>
+          <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'price' ? 'rotate-180' : ''}`} />
+        </button>
+        {openFilter === 'price' && (
+          <div className="pb-4 space-y-2.5">
+            {PRICE_RANGES.map(r => (
+              <label key={r.label} className="flex items-center gap-2.5 cursor-pointer group">
+                <div onClick={() => setPriceRange(priceRange?.min === r.min ? null : { min: r.min, max: r.max })}
+                  className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${priceRange?.min === r.min ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
+                  {priceRange?.min === r.min && <span className="text-white text-[10px] leading-none">✓</span>}
+                </div>
+                <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{r.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <button onClick={() => setOpenFilter(openFilter === 'avail' ? null : 'avail')} className="w-full flex items-center justify-between py-4 text-left">
+          <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Availability</span>
+          <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'avail' ? 'rotate-180' : ''}`} />
+        </button>
+        {openFilter === 'avail' && (
+          <div className="pb-4 space-y-2.5">
+            <label className="flex items-center gap-2.5 cursor-pointer group">
+              <div onClick={() => setInStock(!inStock)}
+                className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${inStock ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
+                {inStock && <span className="text-white text-[10px] leading-none">✓</span>}
+              </div>
+              <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">In Stock Only</span>
+            </label>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const activeFilterCount = (priceRange ? 1 : 0) + (inStock ? 1 : 0)
 
   return (
-    <>
-      <div className="bg-white min-h-screen pb-20 lg:pb-0 overflow-x-hidden">
-        <div className="border-b border-gray-100">
-          <div className="max-w-[1400px] mx-auto px-6 py-3 text-[11px] text-gray-400 uppercase tracking-wider">
-            <Link href="/" className="hover:text-black">Home</Link> / 
-            <Link href={`/collections/${product.department?.toLowerCase()}`} className="hover:text-black"> {product.department} </Link> / 
-            <span className="text-gray-800"> {product.name}</span>
-          </div>
+    <div className="bg-white min-h-screen">
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3">
+          <p className="text-[11px] text-gray-400 tracking-wide">
+            <Link href="/" className="hover:text-gray-700 transition-colors">Home</Link>
+            <span className="mx-2 text-gray-300">/</span>
+            <span className="text-gray-600">{label}</span>
+          </p>
         </div>
+      </div>
 
-        <div className="max-w-[1400px] mx-auto px-6 py-10">
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            
-            {/* 🔥 UI FIX: Left-side Thumbnails completely removed. Only Main Image displays. */}
-            <div className="bg-white p-3 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.06)] relative group h-fit">
-              <img src={displayImage as string} alt={product.name} onClick={() => setZoomOpen(true)} className="w-full h-[340px] sm:h-[480px] lg:h-[600px] object-contain bg-white cursor-zoom-in" />
-              <button onClick={handleWishlist} className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition">
-                <Heart size={16} className={has(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-700'} />
-              </button>
+      <div className="border-b border-gray-100">
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-6 flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-[24px] font-light text-gray-900 tracking-wide">{label}</h1>
+            <p className="text-[12px] text-gray-400 mt-1">{loading ? 'Loading...' : `${total} products`}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileFilter(true)} className="lg:hidden flex items-center gap-1.5 px-4 py-2 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 hover:border-gray-400 transition-colors">
+              <SlidersHorizontal size={13} /> Filter
+              {activeFilterCount > 0 && <span className="w-4 h-4 bg-gray-900 text-white text-[9px] rounded-full flex items-center justify-center">{activeFilterCount}</span>}
+            </button>
+            <div className="hidden sm:flex gap-1 border border-gray-200 rounded-lg overflow-hidden">
+              {([2, 3] as const).map(n => (
+                <button key={n} onClick={() => setCols(n)} className={`w-8 h-8 flex items-center justify-center transition-colors ${cols === n ? 'bg-gray-900 text-white' : 'text-gray-400 hover:bg-gray-50'}`}>
+                  {n === 2 ? <Grid size={13} /> : <LayoutGrid size={13} />}
+                </button>
+              ))}
             </div>
-
-            {/* RIGHT: PRODUCT INFO */}
-            <div className="bg-[#fafafa] rounded-2xl p-6 lg:p-8 shadow-[0_10px_30px_rgba(0,0,0,0.04)] lg:sticky lg:top-[100px]">
-              <div className="flex items-start justify-between gap-4">
-                <h1 className="heading-serif text-[28px] md:text-[34px] tracking-[0.04em] leading-tight">{product.name}</h1>
-                <button onClick={() => setShowShare(true)} className="w-10 h-10 shrink-0 rounded-full bg-black text-white flex items-center justify-center hover:scale-105 transition">
-                  <Share2 size={16} />
-                </button>
-              </div>
-
-              <div className="flex items-center gap-2 mt-3">
-                {[1, 2, 3, 4, 5].map(i => <Star key={i} size={14} className="fill-amber-400 text-amber-400" />)}
-                <span className={`text-[12px] ml-2 font-medium ${isOutOfStock ? 'text-red-500' : 'text-gray-400'}`}>
-                  ({isOutOfStock ? 'Out of Stock' : `${displayStock} in Stock`})
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3 mt-5 pb-6 border-b border-gray-200">
-                <span className="text-[28px] font-semibold text-black">₹{displayPrice.toLocaleString('en-IN')}</span>
-              </div>
-
-              {/* DYNAMIC COLORS WITH THUMBNAILS */}
-              {availableColors.length > 0 && (
-                <div className="mt-6">
-                  <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3">Color: {selectedColor || 'Select'}</p>
-                  <div className="flex gap-3 flex-wrap">
-                    {availableColors.map((c: string) => {
-                      const vImg = variants.find((v: any) => v.color === c && v.image)?.image;
-                      return (
-                        <button key={c} onClick={() => setSelectedColor(c)}
-                          className={`relative w-12 h-12 rounded-full border transition overflow-hidden ${selectedColor === c ? 'border-black ring-2 ring-black/20' : 'border-gray-300 hover:border-black'}`}>
-                          {vImg ? (
-                            <img src={vImg} className="w-full h-full object-cover" alt={c} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[10px]">{c[0]}</div>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* DYNAMIC SIZES */}
-              {availableSizes.length > 0 && (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500">Select Size</p>
-                  </div>
-                  <div className="flex gap-3 flex-wrap">
-                    {availableSizes.map((s: string) => (
-                      <button key={s} onClick={() => setSelectedSize(s)}
-                        className={`w-[44px] h-[44px] rounded-full border transition text-sm ${selectedSize === s ? 'bg-black text-white border-black' : 'border-gray-300 hover:border-black hover:bg-black hover:text-white'}`}>
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {selectionError && <p className="text-[12px] text-red-500 mt-4">Please select all required options.</p>}
-
-              <div className="border-t border-gray-200 my-6"></div>
-
-              <div className="space-y-3">
-                <button onClick={() => handleAddToCart(false)} disabled={isAdding || isOutOfStock}
-                  className="w-full py-4 rounded-full bg-black text-white text-[12px] tracking-[0.2em] uppercase shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:bg-[#111] active:scale-95 transition-all duration-300 disabled:opacity-50">
-                  {isAdding ? 'Processing...' : isOutOfStock ? 'Out of Stock' : added ? 'Added ✓' : 'Add to Cart'}
-                </button>
-                <button onClick={() => handleAddToCart(true)} disabled={isAdding || isOutOfStock}
-                  className="w-full py-4 rounded-full border border-black text-black text-[12px] tracking-[0.2em] uppercase hover:bg-black hover:text-white active:scale-95 transition-all">
-                  Buy Now
-                </button>
-              </div>
-
-              <div className="mt-8 space-y-4">
-                {DETAILS.map((d, i) => (
-                  <div key={i} className="bg-white rounded-xl p-4 border border-gray-100">
-                    <p className="text-[13px] font-semibold text-black mb-1">{d.q}</p>
-                    <p className="text-[12px] text-gray-500 leading-relaxed">{d.a}</p>
-                  </div>
-                ))}
-              </div>
-
+            <div className="relative">
+              <select value={sort} onChange={e => setSort(e.target.value)} className="appearance-none pl-3.5 pr-8 h-9 border border-gray-200 rounded-lg text-[12.5px] text-gray-600 bg-white cursor-pointer outline-none hover:border-gray-400 transition-colors">
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
           </div>
         </div>
       </div>
 
-      {zoomOpen && (
-        <div className="fixed inset-0 z-[999] bg-white flex flex-col">
-          <div className="p-6 flex justify-end"><button onClick={() => setZoomOpen(false)}>✕ Close</button></div>
-          <div className="flex-1 flex items-center justify-center p-6">
-            <img src={displayImage as string} className="max-h-full max-w-full object-contain" />
-          </div>
+      {(priceRange || inStock) && (
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3 flex items-center gap-2 flex-wrap border-b border-gray-50">
+          <span className="text-[11px] text-gray-400">Filters:</span>
+          {priceRange && (
+            <button onClick={() => setPriceRange(null)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
+              {PRICE_RANGES.find(r => r.min === priceRange.min)?.label} <X size={10} />
+            </button>
+          )}
+          {inStock && (
+            <button onClick={() => setInStock(false)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
+              In Stock <X size={10} />
+            </button>
+          )}
+          <button onClick={() => { setPriceRange(null); setInStock(false) }} className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1">Clear all</button>
         </div>
       )}
-    </>
+
+      <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-8 flex gap-8">
+        <aside className="hidden lg:block w-52 shrink-0">
+          <div className="sticky top-28">
+            <p className="text-[11px] font-semibold tracking-[0.2em] uppercase text-gray-700 mb-4">Filter</p>
+            <FilterContent />
+          </div>
+        </aside>
+
+        <div className="flex-1">
+          {loading ? (
+            <div className="flex items-center justify-center py-24"><Loader2 size={28} className="animate-spin text-gray-300" /></div>
+          ) : products.length === 0 ? (
+            <div className="text-center py-24">
+              <p className="text-gray-400 text-[14px]">No products found</p>
+              <button onClick={() => { setPriceRange(null); setInStock(false) }} className="mt-4 text-[12px] text-gray-500 underline">Clear filters</button>
+            </div>
+          ) : (
+            <>
+              <div className={cols === 3 ? 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-4' : 'grid gap-x-4 gap-y-8 grid-cols-2 lg:grid-cols-3'}>
+                {products.map((p, i) => <ProductCard key={p.id} product={p} idx={i} />)}
+              </div>
+              {hasMore && (
+                <div className="text-center mt-12">
+                  <button onClick={handleLoadMore} disabled={loadingMore} className="px-10 py-3 border border-gray-300 text-[12px] tracking-[0.15em] uppercase font-medium text-gray-600 rounded-xl hover:bg-gray-900 hover:text-white hover:border-gray-900 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 mx-auto">
+                    {loadingMore && <Loader2 size={13} className="animate-spin" />}
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
+      {mobileFilter && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/30" onClick={() => setMobileFilter(false)} />
+          <div className="fixed bottom-0 left-0 right-0 z-[90] bg-white rounded-t-2xl max-h-[80vh] overflow-y-auto px-5 pt-5 pb-8" style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.10)' }}>
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-[14px] font-semibold text-gray-900">Filter Products</p>
+              <button onClick={() => setMobileFilter(false)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"><X size={16} className="text-gray-500" /></button>
+            </div>
+            <FilterContent />
+            <button onClick={() => setMobileFilter(false)} className="w-full mt-5 py-3.5 bg-gray-900 text-white text-[13px] font-medium rounded-xl hover:bg-gray-800 transition-colors">Apply Filters</button>
+          </div>
+        </>
+      )}
+    </div>
   )
 }
