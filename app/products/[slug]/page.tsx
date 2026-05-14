@@ -2,13 +2,12 @@
 import { useRef, useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Heart, Share2, Star, Loader2 } from 'lucide-react'
 
 import { getProduct, getProducts, addToWishlist, removeFromWishlist } from '@/lib/api'
 import { useCartStore, useWishlistStore } from '@/store'
 import { addToRecent } from '@/lib/recent'
-import ProductCard, { Product as StoreProduct } from '@/components/ProductCard'
+import { Product as StoreProduct } from '@/components/ProductCard'
 
 const DETAILS = [
   { q: 'Description', a: 'Premium quality product crafted with care. Perfect for your collection.' },
@@ -32,15 +31,11 @@ export default function ProductPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [selectionError, setSelectionError] = useState(false)
   
-  const [imgIdx, setImgIdx] = useState(0)
-  const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null) // 🔥 Added
+  const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
-  const [openQ, setOpenQ] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
   const [showShare, setShowShare] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
-
-  const relatedRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     async function loadData() {
@@ -50,13 +45,13 @@ export default function ProductPage() {
         const p = res.product || res
         setProduct(p)
 
-if (p) {
+        if (p) {
           const recentPayload = { 
             id: p.id, 
             name: p.name, 
             price: p.variants?.[0]?.base_price || 0, 
-            image: p.images?.[0] || 'https://via.placeholder.com/400x500', // 🔥 Fallback
-            href: `/products/${p.slug || p.id}` // 🔥 ADDED: Required by interface
+            image: p.images?.[0] || 'https://via.placeholder.com/400x500', 
+            href: `/products/${p.slug || p.id}`
           }
           setRecent(addToRecent(recentPayload))
         }
@@ -75,15 +70,36 @@ if (p) {
     loadData()
   }, [productId])
 
-// --- VARIANT LOGIC ---
+  // --- VARIANT LOGIC ---
   const variants = product?.variants || []
+  
   const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
 
+  // Determine available sizes based on the currently selected color
   const availableSizes = variants
     .filter((v: any) => !selectedColor || v.color === selectedColor)
     .map((v: any) => v.size)
     .filter(Boolean)
     .filter((val: any, idx: any, self: any) => self.indexOf(val) === idx)
+
+  // 🔥 UX AUTO-SELECT 1: Automatically select the first color on load
+  useEffect(() => {
+    if (availableColors.length > 0 && !selectedColor) {
+      setSelectedColor(availableColors[0])
+    }
+  }, [availableColors, selectedColor])
+
+  // 🔥 UX AUTO-SELECT 2: Automatically select the first size on load OR when color changes
+  useEffect(() => {
+    if (availableSizes.length > 0) {
+      // If nothing is selected, OR if the current size isn't available in the new color, pick the first available size.
+      if (!selectedSize || !availableSizes.includes(selectedSize)) {
+        setSelectedSize(availableSizes[0])
+      }
+    } else {
+      setSelectedSize(null) // Reset if no sizes at all
+    }
+  }, [availableSizes, selectedSize])
 
   // Watch color selection to change image
   useEffect(() => {
@@ -93,25 +109,30 @@ if (p) {
     }
   }, [selectedColor, variants])
 
+  // STOCK CALCULATION FIX: Waterfall filtering
+  let filteredVariants = variants;
+  if (selectedColor) {
+    filteredVariants = filteredVariants.filter((v: any) => v.color === selectedColor);
+  }
+  if (selectedSize) {
+    filteredVariants = filteredVariants.filter((v: any) => v.size === selectedSize);
+  }
+  
+  const displayStock = filteredVariants.reduce((sum: number, v: any) => sum + Number(v.stock || 0), 0);
+  const isOutOfStock = displayStock <= 0;
+
+  // Price logic
   const activeVariant = variants.find((v: any) => 
     (availableSizes.length === 0 || v.size === selectedSize) &&
     (availableColors.length === 0 || v.color === selectedColor)
   )
-
-
-  // ... (keep availableSizes logic the same) ...
-
   const displayPrice = activeVariant ? Number(activeVariant.base_price) : (variants[0] ? Number(variants[0].base_price) : 0)
-  const displayStock = activeVariant ? activeVariant.stock : variants.reduce((sum: number, v: any) => sum + v.stock, 0)
-  const isOutOfStock = displayStock <= 0
 
-  // 🔥 THE FIX: Combine Parent Images and Variant Images into one clean gallery
+  // Image building
   const parentImages = product?.images || []
   const variantImages = variants.map((v: any) => v.image).filter(Boolean)
-  const allImages = Array.from(new Set([...parentImages, ...variantImages])) // Removes duplicates
-
-  const images = allImages.length > 0 ? allImages : ['https://placehold.co/800x1000?text=No+Image']
-  const displayImage = variantImageOverride || images[imgIdx] || images[0]
+  const allImages = Array.from(new Set([...parentImages, ...variantImages])) 
+  const displayImage = variantImageOverride || allImages[0] || 'https://placehold.co/800x1000?text=No+Image'
 
   const handleAddToCart = async (redirectCheckout = false) => {
     if ((availableSizes.length > 0 && !selectedSize) || (availableColors.length > 0 && !selectedColor)) {
@@ -130,7 +151,7 @@ if (p) {
         productId: product.id,
         name: product.name,
         price: displayPrice,
-        image: activeVariant.image || product.images?.[0], // Use variant image in cart
+        image: activeVariant.image || displayImage, 
         size: activeVariant.size || undefined,
         color: activeVariant.color || undefined,
       })
@@ -140,7 +161,7 @@ if (p) {
   }
 
   const handleWishlist = async () => {
-    const storePayload = { id: product.id, name: product.name, price: displayPrice, image: product.images?.[0], href: `/products/${product.id}` }
+    const storePayload = { id: product.id, name: product.name, price: displayPrice, image: displayImage, href: `/products/${product.id}` }
     toggle(storePayload)
     try {
       if (has(product.id)) await removeFromWishlist(product.id)
@@ -165,22 +186,12 @@ if (p) {
         <div className="max-w-[1400px] mx-auto px-6 py-10">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             
-            {/* LEFT: IMAGES */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex gap-3 overflow-x-auto max-w-full pb-2 sm:flex-col sm:overflow-visible">
-                {images.map((img: string, i: number) => (
-                  <button key={i} onClick={() => { setImgIdx(i); setVariantImageOverride(null); }} // 🔥 Reset override on gallery click
-                    className={`relative w-[70px] h-[90px] shrink-0 rounded-lg overflow-hidden border transition ${imgIdx === i && !variantImageOverride ? 'border-black ring-2 ring-black/20' : 'border-gray-200 hover:border-black'}`}>
-                    <Image src={img} alt="Thumbnail" fill className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-              <div className="flex-1 bg-white p-3 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.06)] relative group">
-                <img src={displayImage} alt={product.name} onClick={() => setZoomOpen(true)} className="w-full h-[340px] sm:h-[480px] lg:h-[520px] object-contain bg-white cursor-zoom-in" />
-                <button onClick={handleWishlist} className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition">
-                  <Heart size={16} className={has(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-700'} />
-                </button>
-              </div>
+            {/* 🔥 UI FIX: Left-side Thumbnails completely removed. Only Main Image displays. */}
+            <div className="bg-white p-3 rounded-2xl shadow-[0_15px_40px_rgba(0,0,0,0.06)] relative group h-fit">
+              <img src={displayImage as string} alt={product.name} onClick={() => setZoomOpen(true)} className="w-full h-[340px] sm:h-[480px] lg:h-[600px] object-contain bg-white cursor-zoom-in" />
+              <button onClick={handleWishlist} className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow hover:scale-110 transition">
+                <Heart size={16} className={has(product.id) ? 'fill-red-500 text-red-500' : 'text-gray-700'} />
+              </button>
             </div>
 
             {/* RIGHT: PRODUCT INFO */}
@@ -271,12 +282,11 @@ if (p) {
         </div>
       </div>
 
-      {/* MODALS (Simplified for brevity, keep your existing zoom/share/size logic here) */}
       {zoomOpen && (
         <div className="fixed inset-0 z-[999] bg-white flex flex-col">
           <div className="p-6 flex justify-end"><button onClick={() => setZoomOpen(false)}>✕ Close</button></div>
           <div className="flex-1 flex items-center justify-center p-6">
-            <img src={displayImage} className="max-h-full max-w-full object-contain" />
+            <img src={displayImage as string} className="max-h-full max-w-full object-contain" />
           </div>
         </div>
       )}
