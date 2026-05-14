@@ -11,14 +11,13 @@ function toCard(p: any): Product {
   const variants = p.variants || []
   const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
   const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
-  // ✅ FIX: variant image first — Excel-uploaded products store images on the variant, not the parent
   const variantImage = variants.find((v: any) => v.image)?.image
 
   return {
     id:          p.id || p.slug, 
     name:        p.name,
     price:       Number(price), 
-    image:       variantImage || p.images?.[0] || '',
+    image:       p.image || variantImage || p.images?.[0] || '',
     images:      p.images || [], 
     variants:    variants,       
     href:        `/products/${p.slug || p.id}`,
@@ -36,7 +35,6 @@ function SearchContent() {
   const [products,    setProducts]    = useState<Product[]>([])
   const [loading,     setLoading]     = useState(false)
   const [input,       setInput]       = useState(q)
-  // ✅ FIX: Suggestions loaded from API, not hardcoded dummy data
   const [suggestions, setSuggestions] = useState<string[]>([])
 
   // Load real categories/suggestions from the API on mount
@@ -55,7 +53,6 @@ const doSearch = useCallback(async (query: string) => {
   setLoading(true)
   try {
     const res = await searchProducts(query, 24)
-    console.log('SEARCH RAW:', JSON.stringify(res.products?.[0], null, 2)) // 👈 add this
     setProducts((res.products || []).map(toCard))
   } catch {
     setProducts([])
