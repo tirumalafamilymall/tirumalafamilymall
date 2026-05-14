@@ -47,11 +47,9 @@ export default function Footer() {
             <ul className="space-y-3">
               {[
                 ['Home', '/'],
-                ['Shop', '/shop'],
                 ['Women', '/collections/women'],
                 ['Men', '/collections/men'],
                 ['Kids', '/collections/kids'],
-                ['About', '/about'],
                 ['Contact', '/contact'],
               ].map(([l, h]) => (
                 <li key={l}>

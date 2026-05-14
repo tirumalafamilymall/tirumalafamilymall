@@ -4,19 +4,29 @@ import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Loader2 } from 'lucide-react'
-import ProductCard from '@/components/ProductCard'
+import ProductCard, { Product } from '@/components/ProductCard'
 import { searchProducts } from '@/lib/api'
 
 const SUGGESTIONS = ['Sarees', 'Kurtis', 'Nighties', 'Leggings', 'Men Shirts', 'Kids Frocks', 'Sherwani', 'Palazzo', 'Anarkali']
 
-function toCard(p: any) {
+// 🔥 UPGRADED MAPPER: Now safely extracts variant images, brands, and subcategories
+function toCard(p: any): Product {
+  const variants = p.variants || []
+  const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+  const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
+  const variantImage = variants.find((v: any) => v.image)?.image;
+
   return {
-    id:            p.slug || p.id,
+    id:            p.id || p.slug, 
     name:          p.name,
-    price:         Number(p.base_price), // FIXED: Safety for Decimal
-    originalPrice: p.original_price ? Number(p.original_price) : undefined,
-    image:         p.images?.[0] || '',
+    price:         Number(price), 
+    image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
+    images:        p.images || [], 
+    variants:      variants,       
     href:          `/products/${p.slug || p.id}`,
+    badge:         stock <= 0 ? 'Sold Out' : undefined,
+    brand:         p.brand || undefined,            
+    subcategory:   p.subcategory || undefined,      
   }
 }
 
@@ -25,7 +35,7 @@ function SearchContent() {
   const router        = useRouter()
   const q             = searchParams.get('q') ?? ''
 
-  const [products, setProducts] = useState<any[]>([])
+  const [products, setProducts] = useState<Product[]>([])
   const [loading,  setLoading]  = useState(false)
   const [input,    setInput]    = useState(q)
 
@@ -42,7 +52,7 @@ function SearchContent() {
     }
   }, [])
 
-  useEffect(() => { doSearch(q) }, [q])
+  useEffect(() => { doSearch(q) }, [q, doSearch])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()

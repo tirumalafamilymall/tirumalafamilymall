@@ -39,7 +39,7 @@ export default function Header() {
                 </div>
               </button>
 
-              {/* NAV */}
+              {/* NAV (Sale Removed) */}
               <nav className="hidden lg:flex items-center gap-12 text-[13px] tracking-[0.16em] font-medium text-gray-600">
                 {['Women','Men','Kids','Insta Live'].map((item) => (
                   <Link
@@ -55,10 +55,6 @@ export default function Header() {
                     <span className="absolute left-0 -bottom-[8px] h-[2px] w-0 bg-gradient-to-r from-[#CC0000] to-transparent transition-all duration-300 group-hover:w-full"></span>
                   </Link>
                 ))}
-
-                <Link href="/collections/sale" className="text-[#CC0000] font-semibold">
-                  Sale
-                </Link>
               </nav>
             </div>
 
@@ -67,40 +63,40 @@ export default function Header() {
 
               {/* ICON STYLE */}
               {[
-  { icon: User, link: '/account', hideMobile: true },
-  { icon: Search, action: () => setSearchOpen(true), hideMobile: true },
-  { icon: Heart, link: '/wishlist' },
-  { icon: ShoppingBag, link: '/cart' }
-].map((item, i) => {
-  const Icon = item.icon
+                { icon: User, link: '/account', hideMobile: true },
+                { icon: Search, action: () => setSearchOpen(true), hideMobile: true },
+                { icon: Heart, link: '/wishlist' },
+                { icon: ShoppingBag, link: '/cart' }
+              ].map((item, i) => {
+                const Icon = item.icon
 
-  const baseClass =
-    "w-[40px] h-[40px] items-center justify-center rounded-full bg-white border border-gray-100 shadow-[0_6px_18px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_rgba(0,0,0,0.12)] hover:scale-105 transition-all duration-300"
+                const baseClass =
+                  "w-[40px] h-[40px] items-center justify-center rounded-full bg-white border border-gray-100 shadow-[0_6px_18px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_rgba(0,0,0,0.12)] hover:scale-105 transition-all duration-300"
 
-  const mobileHide = item.hideMobile ? "hidden lg:flex" : "flex"
+                const mobileHide = item.hideMobile ? "hidden lg:flex" : "flex"
 
-  if (item.action) {
-    return (
-      <button
-        key={i}
-        onClick={item.action}
-        className={`${mobileHide} ${baseClass}`}
-      >
-        <Icon className="w-[18px] h-[18px] text-gray-600" />
-      </button>
-    )
-  }
+                if (item.action) {
+                  return (
+                    <button
+                      key={i}
+                      onClick={item.action}
+                      className={`${mobileHide} ${baseClass}`}
+                    >
+                      <Icon className="w-[18px] h-[18px] text-gray-600" />
+                    </button>
+                  )
+                }
 
-  return (
-    <Link
-      key={i}
-      href={item.link}
-      className={`${mobileHide} ${baseClass}`}
-    >
-      <Icon className="w-[18px] h-[18px] text-gray-600" />
-    </Link>
-  )
-})}
+                return (
+                  <Link
+                    key={i}
+                    href={item.link}
+                    className={`${mobileHide} ${baseClass}`}
+                  >
+                    <Icon className="w-[18px] h-[18px] text-gray-600" />
+                  </Link>
+                )
+              })}
 
             </div>
 
@@ -127,126 +123,117 @@ export default function Header() {
       {/* SEARCH */}
       <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
 
-      {/* MOBILE DRAWER (UNCHANGED — already good) */}
       {/* 🔥 MOBILE DRAWER */}
-<>
-  {/* OVERLAY */}
-  <div
-    className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-      menuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
-    }`}
-    onClick={() => setMenuOpen(false)}
-  />
+      <>
+        {/* OVERLAY */}
+        <div
+          className={`fixed inset-0 bg-black/40 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+            menuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
+          }`}
+          onClick={() => setMenuOpen(false)}
+        />
 
-  {/* DRAWER */}
-<div
-  className={`fixed inset-0 w-[88%] max-w-[340px] 
-  bg-gradient-to-b from-white via-[#fafafa] to-white
-  z-[999] px-6 pt-6 pb-28 h-[100dvh]
-  shadow-[30px_0_80px_rgba(0,0,0,0.15)]
-  transition-transform duration-300 ease-out
-  ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
->
+        {/* DRAWER */}
+        <div
+          className={`fixed inset-0 w-[88%] max-w-[340px] 
+          bg-gradient-to-b from-white via-[#fafafa] to-white
+          z-[999] px-6 pt-6 pb-28 h-[100dvh]
+          shadow-[30px_0_80px_rgba(0,0,0,0.15)]
+          transition-transform duration-300 ease-out
+          ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        >
 
-    {/* TOP */}
-    <div className="flex items-start text-left justify-between mb-8">
+          {/* TOP */}
+          <div className="flex items-start text-left justify-between mb-8">
 
-<div className="flex flex-col items-center leading-tight">
+            <div className="flex flex-col items-center leading-tight">
 
-  {/* ICON */}
-  <img src="/logo1.png" className="h-[40px] lg:h-[50px] mb-1" />
+              {/* ICON */}
+              <img src="/logo1.png" className="h-[40px] lg:h-[50px] mb-1" />
 
-  {/* BRAND NAME */}
-  <h1 className="text-[18px] lg:text-[22px] font-semibold uppercase tracking-[0.12em] text-black">
-    Tirumala
-  </h1>
+              {/* BRAND NAME */}
+              <h1 className="text-[18px] lg:text-[22px] font-semibold uppercase tracking-[0.12em] text-black">
+                Tirumala
+              </h1>
 
-  {/* SUBTEXT */}
-  <p className="text-[10px] tracking-[0.25em] text-[#8b1e1e] uppercase mt-[2px]">
-    Family Mall
-  </p>
+              {/* SUBTEXT */}
+              <p className="text-[10px] tracking-[0.25em] text-[#8b1e1e] uppercase mt-[2px]">
+                Family Mall
+              </p>
 
-</div>
+            </div>
 
-      <button
-        onClick={() => setMenuOpen(false)}
-        className="w-[36px] h-[36px] rounded-full bg-white border border-[#eee] shadow-sm flex items-center justify-center"
-      >
-        <X size={18} />
-      </button>
+            <button
+              onClick={() => setMenuOpen(false)}
+              className="w-[36px] h-[36px] rounded-full bg-white border border-[#eee] shadow-sm flex items-center justify-center"
+            >
+              <X size={18} />
+            </button>
 
-    </div>
+          </div>
 
-    {/* MENU */}
-<nav className="flex flex-col mt-6">
+          {/* MENU (Sale Removed) */}
+          <nav className="flex flex-col mt-6">
 
-  {[
-    'Home',
-    'Women',
-    'Men',
-    'Kids',
-    'Insta Live'
-  ].map((item, i) => (
-    <Link
-      key={item}
-      href={item === 'Home' ? '/' : `/collections/${item.toLowerCase().replace(' ', '-')}`}
-      onClick={() => setMenuOpen(false)}
-      className="group py-3 flex items-center justify-between border-b border-[#f5f5f5]"
-    >
-      <span className="text-[18px] font-medium text-black group-hover:tracking-wide transition-all duration-300">
-        {item}
-      </span>
+            {[
+              'Home',
+              'Women',
+              'Men',
+              'Kids',
+              'Insta Live'
+            ].map((item, i) => (
+              <Link
+                key={item}
+                href={item === 'Home' ? '/' : `/collections/${item.toLowerCase().replace(' ', '-')}`}
+                onClick={() => setMenuOpen(false)}
+                className="group py-3 flex items-center justify-between border-b border-[#f5f5f5]"
+              >
+                <span className="text-[18px] font-medium text-black group-hover:tracking-wide transition-all duration-300">
+                  {item}
+                </span>
 
-      <span className="text-gray-300 group-hover:text-black group-hover:translate-x-1 transition">
-        →
-      </span>
-    </Link>
-  ))}
+                <span className="text-gray-300 group-hover:text-black group-hover:translate-x-1 transition">
+                  →
+                </span>
+              </Link>
+            ))}
 
-  {/* DIVIDER */}
-  <div className="my-4 border-t border-[#eee]" />
+            {/* DIVIDER */}
+            <div className="my-4 border-t border-[#eee]" />
 
-  {/* SMALL LINKS */}
-  <div className="flex flex-col gap-3">
-    <Link href="/about" className="text-[14px] text-gray-500 hover:text-black transition">
-      About Us
-    </Link>
+            {/* SMALL LINKS */}
+            <div className="flex flex-col gap-3">
+              <Link href="/about" className="text-[14px] text-gray-500 hover:text-black transition">
+                About Us
+              </Link>
 
-    <Link href="/contact" className="text-[14px] text-gray-500 hover:text-black transition">
-      Contact
-    </Link>
-  </div>
+              <Link href="/contact" className="text-[14px] text-gray-500 hover:text-black transition">
+                Contact
+              </Link>
+            </div>
 
-  {/* SALE */}
-  <Link
-    href="/collections/sale"
-    className="text-[16px] text-[#8b1e1e] font-semibold mt-5"
-  >
-    Sale
-  </Link>
-
-</nav>
+          </nav>
 
 
-    {/* CTA */}
-<div className="absolute bottom-6 left-6 right-6">
+          {/* CTA */}
+          <div className="absolute bottom-6 left-6 right-6">
 
-  <Link
-    href="/collections/new"
-    className="block text-center py-4 rounded-full 
-    bg-[#8b1e1e] 
-    hover:bg-[#a83232]
-    text-white text-[12px] tracking-[0.3em] uppercase
-    shadow-[0_8px_25px_rgba(139,30,30,0.25)]
-    transition-all duration-300"
-  >
-    Shop New Arrivals
-  </Link>
+            <Link
+              href="/collections/new"
+              className="block text-center py-4 rounded-full 
+              bg-[#8b1e1e] 
+              hover:bg-[#a83232]
+              text-white text-[12px] tracking-[0.3em] uppercase
+              shadow-[0_8px_25px_rgba(139,30,30,0.25)]
+              transition-all duration-300"
+            >
+              Shop New Arrivals
+            </Link>
 
-</div>
+          </div>
 
-  </div>
-</>
+        </div>
+      </>
     </>
   )
 }

@@ -76,16 +76,18 @@ export const getProducts = (params?: {
   max_price?: number
   in_stock?: boolean
   search?: string
-  size?: string   // <-- NEW
-  color?: string  // <-- NEW
+  size?: string   
+  color?: string  
+  brand?: string 
 }) => {
   const q = new URLSearchParams()
-  // FIXED: Using !== undefined to safely allow '0'
+  
   if (params?.page !== undefined)        q.set('page',        String(params.page))
   if (params?.limit !== undefined)       q.set('limit',       String(params.limit))
   if (params?.department)                q.set('department',  params.department)
   if (params?.category)                  q.set('category',    params.category)
   if (params?.subcategory)               q.set('subcategory', params.subcategory)
+  if (params?.brand)                     q.set('brand',       params.brand) 
   if (params?.sort)                      q.set('sort',        params.sort)
   if (params?.min_price !== undefined)   q.set('min_price',   String(params.min_price))
   if (params?.max_price !== undefined)   q.set('max_price',   String(params.max_price))
@@ -93,6 +95,7 @@ export const getProducts = (params?: {
   if (params?.search)                    q.set('search',      params.search)
   if (params?.size)                      q.set('size',        params.size)
   if (params?.color)                     q.set('color',       params.color)
+  
   return apiFetch(`/api/products?${q}`)
 }
 

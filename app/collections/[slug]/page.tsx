@@ -35,8 +35,8 @@ function toCardProduct(p: any): Product {
     variants:      variants,       
     href:          `/products/${p.slug || p.id}`,
     badge:         stock <= 0 ? 'Sold Out' : undefined,
-    brand:         p.brand || undefined,            // 🔥 Added
-    subcategory:   p.subcategory || undefined,      // 🔥 Added
+    brand:         p.brand || undefined,            
+    subcategory:   p.subcategory || undefined,      
   }
 }
 
@@ -59,6 +59,11 @@ export default function CollectionPage() {
   const [sort,         setSort]         = useState('newest')
   const [inStock,      setInStock]      = useState(false)
   const [priceRange,   setPriceRange]   = useState<{ min: number; max: number } | null>(null)
+  
+  // 🔥 NEW FILTER STATES
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
+  const [selectedSub,   setSelectedSub]   = useState<string | null>(null)
+
   const [mobileFilter, setMobileFilter] = useState(false)
   const [cols,         setCols]         = useState<2 | 3>(2)
   const [openFilter,   setOpenFilter]   = useState<string | null>('price')
@@ -70,14 +75,17 @@ export default function CollectionPage() {
       replace ? setLoading(true) : setLoadingMore(true)
 
       const res = await getProducts({
-        page:      pageNum,
-        limit:     LIMIT,
-        department: activeDepartment,
-        category:  activeCategory, 
+        page:        pageNum,
+        limit:       LIMIT,
+        department:  activeDepartment,
+        category:    activeCategory, 
         sort,
-        in_stock:  inStock || undefined,
-        min_price: priceRange?.min,
-        max_price: priceRange?.max === 99999 ? undefined : priceRange?.max,
+        in_stock:    inStock || undefined,
+        min_price:   priceRange?.min,
+        max_price:   priceRange?.max === 99999 ? undefined : priceRange?.max,
+        // 🔥 PASS NEW FILTERS TO API
+        brand:       selectedBrand || undefined,
+        subcategory: selectedSub || undefined,
       })
 
       const mapped = (res.products || []).map(toCardProduct)
@@ -89,7 +97,7 @@ export default function CollectionPage() {
       setLoading(false)
       setLoadingMore(false)
     }
-  }, [activeDepartment, activeCategory, sort, inStock, priceRange])
+  }, [activeDepartment, activeCategory, sort, inStock, priceRange, selectedBrand, selectedSub])
 
   useEffect(() => {
     setPage(1)
@@ -104,8 +112,14 @@ export default function CollectionPage() {
 
   const hasMore = products.length < total
 
+  // 🔥 DYNAMICALLY EXTRACT AVAILABLE BRANDS AND SUBCATEGORIES FOR THE UI
+  const availableBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean))) as string[]
+  const availableSubcategories = Array.from(new Set(products.map(p => p.subcategory).filter(Boolean))) as string[]
+
   const FilterContent = () => (
     <div className="space-y-0 divide-y divide-gray-100">
+      
+      {/* PRICE */}
       <div>
         <button onClick={() => setOpenFilter(openFilter === 'price' ? null : 'price')} className="w-full flex items-center justify-between py-4 text-left">
           <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Price</span>
@@ -125,6 +139,54 @@ export default function CollectionPage() {
           </div>
         )}
       </div>
+
+      {/* 🔥 BRAND FILTER */}
+      {availableBrands.length > 0 && (
+        <div>
+          <button onClick={() => setOpenFilter(openFilter === 'brand' ? null : 'brand')} className="w-full flex items-center justify-between py-4 text-left">
+            <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Brand</span>
+            <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'brand' ? 'rotate-180' : ''}`} />
+          </button>
+          {openFilter === 'brand' && (
+            <div className="pb-4 space-y-2.5 max-h-48 overflow-y-auto pr-2">
+              {availableBrands.map(b => (
+                <label key={b} className="flex items-center gap-2.5 cursor-pointer group">
+                  <div onClick={() => setSelectedBrand(selectedBrand === b ? null : b)}
+                    className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${selectedBrand === b ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
+                    {selectedBrand === b && <span className="text-white text-[10px] leading-none">✓</span>}
+                  </div>
+                  <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{b}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 🔥 SUBCATEGORY FILTER */}
+      {availableSubcategories.length > 0 && (
+        <div>
+          <button onClick={() => setOpenFilter(openFilter === 'sub' ? null : 'sub')} className="w-full flex items-center justify-between py-4 text-left">
+            <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Category</span>
+            <ChevronDown size={13} className={`text-gray-400 transition-transform ${openFilter === 'sub' ? 'rotate-180' : ''}`} />
+          </button>
+          {openFilter === 'sub' && (
+            <div className="pb-4 space-y-2.5 max-h-48 overflow-y-auto pr-2">
+              {availableSubcategories.map(s => (
+                <label key={s} className="flex items-center gap-2.5 cursor-pointer group">
+                  <div onClick={() => setSelectedSub(selectedSub === s ? null : s)}
+                    className={`w-4 h-4 rounded border-[1.5px] flex items-center justify-center transition-all cursor-pointer ${selectedSub === s ? 'bg-gray-900 border-gray-900' : 'border-gray-300 group-hover:border-gray-500'}`}>
+                    {selectedSub === s && <span className="text-white text-[10px] leading-none">✓</span>}
+                  </div>
+                  <span className="text-[12.5px] text-gray-600 group-hover:text-gray-900 transition-colors">{s}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* AVAILABILITY */}
       <div>
         <button onClick={() => setOpenFilter(openFilter === 'avail' ? null : 'avail')} className="w-full flex items-center justify-between py-4 text-left">
           <span className="text-[12px] font-semibold text-gray-700 tracking-[0.08em] uppercase">Availability</span>
@@ -142,10 +204,18 @@ export default function CollectionPage() {
           </div>
         )}
       </div>
+
     </div>
   )
 
-  const activeFilterCount = (priceRange ? 1 : 0) + (inStock ? 1 : 0)
+  const activeFilterCount = (priceRange ? 1 : 0) + (inStock ? 1 : 0) + (selectedBrand ? 1 : 0) + (selectedSub ? 1 : 0)
+
+  const clearAllFilters = () => {
+    setPriceRange(null)
+    setInStock(false)
+    setSelectedBrand(null)
+    setSelectedSub(null)
+  }
 
   return (
     <div className="bg-white min-h-screen">
@@ -187,7 +257,8 @@ export default function CollectionPage() {
         </div>
       </div>
 
-      {(priceRange || inStock) && (
+      {/* ACTIVE FILTERS STRIP */}
+      {activeFilterCount > 0 && (
         <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-3 flex items-center gap-2 flex-wrap border-b border-gray-50">
           <span className="text-[11px] text-gray-400">Filters:</span>
           {priceRange && (
@@ -195,12 +266,22 @@ export default function CollectionPage() {
               {PRICE_RANGES.find(r => r.min === priceRange.min)?.label} <X size={10} />
             </button>
           )}
+          {selectedBrand && (
+            <button onClick={() => setSelectedBrand(null)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
+              {selectedBrand} <X size={10} />
+            </button>
+          )}
+          {selectedSub && (
+            <button onClick={() => setSelectedSub(null)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
+              {selectedSub} <X size={10} />
+            </button>
+          )}
           {inStock && (
             <button onClick={() => setInStock(false)} className="flex items-center gap-1.5 text-[11px] bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-gray-600 transition-colors">
               In Stock <X size={10} />
             </button>
           )}
-          <button onClick={() => { setPriceRange(null); setInStock(false) }} className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1">Clear all</button>
+          <button onClick={clearAllFilters} className="text-[11px] text-red-500 hover:text-red-700 transition-colors ml-1">Clear all</button>
         </div>
       )}
 
@@ -217,8 +298,8 @@ export default function CollectionPage() {
             <div className="flex items-center justify-center py-24"><Loader2 size={28} className="animate-spin text-gray-300" /></div>
           ) : products.length === 0 ? (
             <div className="text-center py-24">
-              <p className="text-gray-400 text-[14px]">No products found</p>
-              <button onClick={() => { setPriceRange(null); setInStock(false) }} className="mt-4 text-[12px] text-gray-500 underline">Clear filters</button>
+              <p className="text-gray-400 text-[14px]">No products found matching filters.</p>
+              <button onClick={clearAllFilters} className="mt-4 text-[12px] text-gray-500 underline">Clear filters</button>
             </div>
           ) : (
             <>
