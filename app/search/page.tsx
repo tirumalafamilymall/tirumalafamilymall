@@ -50,18 +50,19 @@ function SearchContent() {
       .catch(() => setSuggestions([]))
   }, [])
 
-  const doSearch = useCallback(async (query: string) => {
-    if (!query.trim()) { setProducts([]); return }
-    setLoading(true)
-    try {
-      const res = await searchProducts(query, 24)
-      setProducts((res.products || []).map(toCard))
-    } catch {
-      setProducts([])
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+const doSearch = useCallback(async (query: string) => {
+  if (!query.trim()) { setProducts([]); return }
+  setLoading(true)
+  try {
+    const res = await searchProducts(query, 24)
+    console.log('SEARCH RAW:', JSON.stringify(res.products?.[0], null, 2)) // 👈 add this
+    setProducts((res.products || []).map(toCard))
+  } catch {
+    setProducts([])
+  } finally {
+    setLoading(false)
+  }
+}, [])
 
   useEffect(() => { doSearch(q) }, [q, doSearch])
 
