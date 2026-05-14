@@ -3,10 +3,8 @@
 import Link from 'next/link'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft } from 'lucide-react'
 import { useCartStore } from '@/store'
-import Image from 'next/image'
 
 export default function CartPage() {
-  // CHANGED: items now contain variantId and productId
   const { items, removeItem, updateQty, totalItems, totalPrice } = useCartStore()
   
   const subtotal = totalPrice()
@@ -50,16 +48,15 @@ export default function CartPage() {
           {/* Items list */}
           <div className="lg:col-span-2 space-y-3">
             {items.map((item) => (
-              // FIXED: Key now uses the unique variantId
               <div key={item.variantId}
                 className="flex gap-4 p-4 border border-gray-100 rounded-2xl hover:border-gray-200 transition-colors"
               >
-                {/* Link still goes to the parent Product Page */}
                 <Link href={`/products/${item.productId}`}
                   className="w-20 h-24 rounded-xl overflow-hidden shrink-0 relative bg-gray-50 flex items-center justify-center"
                 >
+                  {/* 🔥 FIX: Replaced strict next/image with standard img tag */}
                   {item.image ? (
-                    <Image src={item.image} alt={item.name} fill className="object-cover" />
+                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-3xl opacity-20">👗</span>
                   )}
@@ -77,21 +74,18 @@ export default function CartPage() {
 
                   <div className="flex items-center justify-between mt-3">
                     <div className="flex items-center gap-0 border border-gray-200 rounded-lg">
-                      {/* FIXED: updateQty now takes 2 arguments: (variantId, newQty) */}
                       <button onClick={() => updateQty(item.variantId, item.qty - 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-l-lg transition-colors text-gray-500"
                       >
                         <Minus size={11} />
                       </button>
                       <span className="w-8 text-center text-[13px] font-medium">{item.qty}</span>
-                      {/* FIXED: updateQty now takes 2 arguments: (variantId, newQty) */}
                       <button onClick={() => updateQty(item.variantId, item.qty + 1)}
                         className="w-8 h-8 flex items-center justify-center hover:bg-gray-50 rounded-r-lg transition-colors text-gray-500"
                       >
                         <Plus size={11} />
                       </button>
                     </div>
-                    {/* FIXED: removeItem now takes 1 argument: (variantId) */}
                     <button onClick={() => removeItem(item.variantId)}
                       className="flex items-center gap-1 text-[11.5px] text-gray-400 hover:text-red-500 transition-colors"
                     >
