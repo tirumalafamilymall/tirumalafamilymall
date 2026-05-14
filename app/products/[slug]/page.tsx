@@ -69,7 +69,7 @@ export default function ProductPage() {
     loadData()
   }, [productId])
 
-  // --- VARIANT LOGIC ---
+// --- VARIANT LOGIC ---
   const variants = product?.variants || []
   const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
 
@@ -92,12 +92,20 @@ export default function ProductPage() {
     (availableColors.length === 0 || v.color === selectedColor)
   )
 
+
+  // ... (keep availableSizes logic the same) ...
+
   const displayPrice = activeVariant ? Number(activeVariant.base_price) : (variants[0] ? Number(variants[0].base_price) : 0)
   const displayStock = activeVariant ? activeVariant.stock : variants.reduce((sum: number, v: any) => sum + v.stock, 0)
   const isOutOfStock = displayStock <= 0
 
-  const images = product?.images?.length > 0 ? product.images : ['https://placehold.co/800x1000?text=No+Image']
-  const displayImage = variantImageOverride || images[imgIdx] // 🔥 Added logic
+  // 🔥 THE FIX: Combine Parent Images and Variant Images into one clean gallery
+  const parentImages = product?.images || []
+  const variantImages = variants.map((v: any) => v.image).filter(Boolean)
+  const allImages = Array.from(new Set([...parentImages, ...variantImages])) // Removes duplicates
+
+  const images = allImages.length > 0 ? allImages : ['https://placehold.co/800x1000?text=No+Image']
+  const displayImage = variantImageOverride || images[imgIdx] || images[0]
 
   const handleAddToCart = async (redirectCheckout = false) => {
     if ((availableSizes.length > 0 && !selectedSize) || (availableColors.length > 0 && !selectedColor)) {
