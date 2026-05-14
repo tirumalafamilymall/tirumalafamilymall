@@ -31,11 +31,16 @@ function toCardProduct(p: any): Product {
     ? p.base_price 
     : (variants[0]?.base_price || 0)
 
+  // 🔥 THE FIX: Extract the variant image here AND pass the full arrays down
+  const variantImage = variants.find((v: any) => v.image)?.image;
+
   return {
-    id:            p.id, // Better to use the true ID for React keys
+    id:            p.id, 
     name:          p.name,
-    price:         Number(price), // Safely convert Decimal to Number
-    image:         p.images?.[0] || '',
+    price:         Number(price), 
+    image:         p.images?.[0] || variantImage || '', // Direct fallback
+    images:        p.images || [], // Pass the arrays so ProductCard has them
+    variants:      variants,       // Pass the arrays so ProductCard has them
     href:          `/products/${p.slug || p.id}`,
     badge:         stock <= 0 ? 'Sold Out' : undefined,
   }
