@@ -5,39 +5,50 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, Loader2 } from 'lucide-react'
 import ProductCard, { Product } from '@/components/ProductCard'
-import { searchProducts } from '@/lib/api'
+import { searchProducts, getProductFilters } from '@/lib/api'
 
-const SUGGESTIONS = ['Sarees', 'Kurtis', 'Nighties', 'Leggings', 'Men Shirts', 'Kids Frocks', 'Sherwani', 'Palazzo', 'Anarkali']
-
-// 🔥 UPGRADED MAPPER: Now safely extracts variant images, brands, and subcategories
 function toCard(p: any): Product {
   const variants = p.variants || []
   const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
   const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
-  const variantImage = variants.find((v: any) => v.image)?.image;
+  // ✅ FIX: variant image first — Excel-uploaded products store images on the variant, not the parent
+  const variantImage = variants.find((v: any) => v.image)?.image
 
   return {
-    id:            p.id || p.slug, 
-    name:          p.name,
-    price:         Number(price), 
-    image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
-    images:        p.images || [], 
-    variants:      variants,       
-    href:          `/products/${p.slug || p.id}`,
-    badge:         stock <= 0 ? 'Sold Out' : undefined,
-    brand:         p.brand || undefined,            
-    subcategory:   p.subcategory || undefined,      
+    id:          p.id || p.slug, 
+    name:        p.name,
+    price:       Number(price), 
+    image:       variantImage || p.images?.[0] || '',
+    images:      p.images || [], 
+    variants:    variants,       
+    href:        `/products/${p.slug || p.id}`,
+    badge:       stock <= 0 ? 'Sold Out' : undefined,
+    brand:       p.brand || undefined,            
+    subcategory: p.subcategory || undefined,      
   }
 }
 
 function SearchContent() {
-  const searchParams  = useSearchParams()
-  const router        = useRouter()
-  const q             = searchParams.get('q') ?? ''
+  const searchParams = useSearchParams()
+  const router       = useRouter()
+  const q            = searchParams.get('q') ?? ''
 
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading,  setLoading]  = useState(false)
-  const [input,    setInput]    = useState(q)
+  const [products,    setProducts]    = useState<Product[]>([])
+  const [loading,     setLoading]     = useState(false)
+  const [input,       setInput]       = useState(q)
+  // ✅ FIX: Suggestions loaded from API, not hardcoded dummy data
+  const [suggestions, setSuggestions] = useState<string[]>([])
+
+  // Load real categories/suggestions from the API on mount
+  useEffect(() => {
+    getProductFilters()
+      .then((data: any) => {
+        // Use categories from the filters endpoint as suggestions
+        const cats: string[] = data?.categories || []
+        setSuggestions(cats.slice(0, 9)) // show up to 9
+      })
+      .catch(() => setSuggestions([]))
+  }, [])
 
   const doSearch = useCallback(async (query: string) => {
     if (!query.trim()) { setProducts([]); return }
@@ -116,15 +127,19 @@ function SearchContent() {
               <Search size={22} className="text-gray-400" />
             </div>
             <p className="text-sm text-gray-500 mb-8">Start searching for products</p>
-            <p className="text-[10px] tracking-[0.25em] uppercase text-gray-400 mb-4">Popular Searches</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              {SUGGESTIONS.map(s => (
-                <Link key={s} href={`/search?q=${s}`}
-                  className="text-[12px] text-gray-600 border border-gray-200 px-5 py-2 rounded-full hover:border-black hover:text-black hover:scale-[1.03] transition-all">
-                  {s}
-                </Link>
-              ))}
-            </div>
+            {suggestions.length > 0 && (
+              <>
+                <p className="text-[10px] tracking-[0.25em] uppercase text-gray-400 mb-4">Popular Categories</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {suggestions.map(s => (
+                    <Link key={s} href={`/search?q=${encodeURIComponent(s)}`}
+                      className="text-[12px] text-gray-600 border border-gray-200 px-5 py-2 rounded-full hover:border-black hover:text-black hover:scale-[1.03] transition-all">
+                      {s}
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

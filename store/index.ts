@@ -9,13 +9,13 @@ import { onAuthChange } from '@/lib/auth'
 /* --- Types Updated for Variants --- */
 export interface CartItem {
   id: string;         // The CartItem row ID
-  variantId: string;  // NEW: The specific physical item
+  variantId: string;  // The specific physical item
   productId: string;  // The parent blueprint
   name: string; 
   price: number; 
   image: string; 
   size?: string; 
-  color?: string;     // NEW
+  color?: string;
   qty: number;
 }
 
@@ -49,7 +49,6 @@ export const useCartStore = create<CartStore>()(
       openCart: () => set({ isOpen: true }),
       closeCart: () => set({ isOpen: false }),
 
-      // Fetches from DB and replaces local state
       syncCart: async () => {
         try {
           const res = await getCart()
@@ -59,7 +58,8 @@ export const useCartStore = create<CartStore>()(
               variantId: i.variant_id || i.variant?.id,
               productId: i.variant?.product_id || i.variant?.product?.id,
               name: i.variant?.product?.name,
-              price: Number(i.variant?.base_price || 0), // Handle Decimal
+              price: Number(i.variant?.base_price || 0),
+              // ✅ FIX: Check variant.image first, then fall back to parent product images
               image: i.variant?.image || i.variant?.product?.images?.[0] || '',
               qty: i.quantity,
               size: i.variant?.size || undefined,
@@ -74,7 +74,6 @@ export const useCartStore = create<CartStore>()(
 
       addItem: async (incoming) => {
         const items = get().items
-        // Find by exact Variant ID now!
         const existing = items.find(i => i.variantId === incoming.variantId)
         
         // 1. Update UI Instantly (Optimistic)
@@ -86,8 +85,8 @@ export const useCartStore = create<CartStore>()(
 
         // 2. Sync to DB if logged in
         try {
-          await apiAddToCart(incoming.variantId, 1) // Send variantId to backend
-          get().syncCart() // Refresh IDs from DB
+          await apiAddToCart(incoming.variantId, 1)
+          get().syncCart()
         } catch { /* Stay in guest mode */ }
       },
 
@@ -125,7 +124,6 @@ export const useCartStore = create<CartStore>()(
 /* ─────────────────────────────────────────
    WISHLIST STORE (Member + Guest Hybrid)
 ───────────────────────────────────────── */
-// (Wishlist stays the same because users wishlist the Parent Product, not a specific size)
 interface WishlistStore {
   items:          WishItem[];
   isOpen:         boolean;           
@@ -152,9 +150,13 @@ export const useWishlistStore = create<WishlistStore>()(
             const dbItems = res.wishlist.items.map((i: any) => ({
               id: i.product?.id,
               name: i.product?.name,
-              price: Number(i.product?.variants?.[0]?.base_price || 0), // Read price from variant
-              image: i.product?.images?.[0] || '',
-              href: `/products/${i.product?.id}`
+              price: Number(i.product?.variants?.[0]?.base_price || 0),
+              // ✅ FIX: Check variant.image first, then fall back to parent product images
+              // This fixes the "image flashes then disappears" bug for Excel-uploaded products
+              image: i.product?.variants?.find((v: any) => v.image)?.image
+                     || i.product?.images?.[0]
+                     || '',
+              href: `/products/${i.product?.slug || i.product?.id}`
             }))
             set({ items: dbItems })
           }
