@@ -60,7 +60,6 @@ export const updateProfile = (data: { name?: string }) =>
     method: 'PATCH',
     body: JSON.stringify(data),
   })
-
 /* ─────────────────────────────────────────
    PRODUCTS (PUBLIC)
 ───────────────────────────────────────── */
@@ -79,6 +78,7 @@ export const getProducts = (params?: {
   size?: string   
   color?: string  
   brand?: string 
+  sales_channel?: string // 🔥 ADDED THIS
 }) => {
   const q = new URLSearchParams()
   
@@ -88,6 +88,7 @@ export const getProducts = (params?: {
   if (params?.category)                  q.set('category',    params.category)
   if (params?.subcategory)               q.set('subcategory', params.subcategory)
   if (params?.brand)                     q.set('brand',       params.brand) 
+  if (params?.sales_channel)             q.set('sales_channel', params.sales_channel) // 🔥 ADDED THIS
   if (params?.sort)                      q.set('sort',        params.sort)
   if (params?.min_price !== undefined)   q.set('min_price',   String(params.min_price))
   if (params?.max_price !== undefined)   q.set('max_price',   String(params.max_price))

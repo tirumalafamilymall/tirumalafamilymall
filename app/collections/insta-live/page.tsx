@@ -3,102 +3,141 @@
 import { useState, useEffect } from 'react'
 import { Instagram, Play, Loader2 } from 'lucide-react'
 import ProductCard, { Product } from '@/components/ProductCard'
-import { getInstaLivePosts } from '@/lib/api'
+import { getInstaLivePosts, getProducts } from '@/lib/api' // 🔥 Imported getProducts
 
 function toCardProduct(p: any): Product {
+  const variants = p.variants || []
+  const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+  const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || p.price || 0)
+  const variantImage = variants.find((v: any) => v.image)?.image;
+
   return {
-    id:            p.slug || p.id,
+    id:            p.id || p.slug, 
     name:          p.name,
-    price:         p.base_price ?? p.price,
-    originalPrice: p.original_price ?? undefined,
-    image:         p.images?.[0] || '',
+    price:         Number(price), 
+    image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
+    images:        p.images || [], 
+    variants:      variants,       
     href:          `/products/${p.slug || p.id}`,
-    badge:         undefined,
+    badge:         stock <= 0 ? 'Sold Out' : undefined,
+    sold:          stock <= 0,
   }
 }
 
 export default function InstaLivePage() {
-  const [posts,   setPosts]   = useState<any[]>([])
+  const [topPosts, setTopPosts] = useState<any[]>([])
+  const [exclusiveProducts, setExclusiveProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
-  const [error,   setError]   = useState('')
-
-  // Flatten all products from all active posts, deduplicated
-  const products: Product[] = []
-  const seen = new Set<string>()
-  for (const post of posts) {
-    for (const lp of post.products ?? []) {
-      const p = lp.product ?? lp
-      if (!seen.has(p.id)) {
-        seen.add(p.id)
-        products.push(toCardProduct(p))
-      }
-    }
-  }
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    getInstaLivePosts(true)
-      .then(res => setPosts(res.posts ?? res ?? []))
-      .catch(() => setError('Failed to load products'))
-      .finally(() => setLoading(false))
+    async function load() {
+      try {
+        // Fetch posts AND exclusive Insta Live products simultaneously
+        const [postsRes, prodsRes] = await Promise.all([
+          getInstaLivePosts(),
+          getProducts({ sales_channel: 'INSTA_LIVE', limit: 50 })
+        ])
+
+        // 🔥 Auto-Hide Logic: Only keep posts where the combined stock is > 0
+        const validPosts = (postsRes.posts || []).filter((post: any) => {
+          const combinedStock = post.products.reduce((acc: number, lp: any) => acc + (lp.product?.stock || 0), 0)
+          return combinedStock > 0
+        })
+
+        // Take the top 3 newest active posts
+        setTopPosts(validPosts.slice(0, 3))
+        
+        // Map the grid of exclusive products
+        setExclusiveProducts((prodsRes.products || []).map(toCardProduct))
+
+      } catch (err) {
+        setError('Failed to load Insta Live collection')
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
   }, [])
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white pb-20">
       <div className="border-b border-gray-100 py-3">
-        <div className="max-w-7xl mx-auto px-4 lg:px-8">
-          <p className="text-xs text-gray-400">Home / <span className="text-gray-700">Insta Live</span></p>
+        <div className="max-w-[1400px] mx-auto px-5 lg:px-10">
+          <p className="text-[11px] text-gray-400 tracking-wide">
+            Home <span className="mx-2 text-gray-300">/</span> <span className="text-gray-700">Insta Live</span>
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 lg:py-12">
-
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-red-50 px-4 py-2 rounded-full mb-4">
-            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-xs font-medium text-red-600 tracking-wide">LIVE NOW</span>
+      <div className="max-w-[1400px] mx-auto px-5 lg:px-10 py-10 lg:py-16">
+        
+        <div className="text-center mb-16">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500 mx-auto flex items-center justify-center text-white mb-4 shadow-lg shadow-red-500/20">
+            <Instagram size={22} />
           </div>
-          <h1 className="text-2xl font-light text-gray-900 mb-2">Insta Live Collection</h1>
-          <p className="text-sm text-gray-400">Products from our latest Instagram Live sessions</p>
-          <div className="w-10 h-px bg-gray-200 mx-auto mt-4" />
+          <h1 className="heading-serif text-3xl md:text-4xl tracking-wide text-gray-900 mb-3">Live Exclusives</h1>
+          <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed">Shop the exact looks featured in our latest Instagram Reels. These styles sell out fast!</p>
         </div>
 
-        {/* Follow CTA */}
-        <a
-          href="https://instagram.com/tirumalafamilymall777"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-4 bg-gradient-to-r from-purple-50 via-pink-50 to-orange-50 rounded-xl p-5 mb-10 border border-pink-100 hover:shadow-md transition-shadow group max-w-2xl mx-auto"
-        >
-          <div className="w-14 h-14 bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 rounded-2xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-105 transition-transform">
-            <Instagram size={24} className="text-white" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-900">Follow us on Instagram</p>
-            <p className="text-xs text-gray-500 mt-0.5">@tirumalafamilymall777 — Live sessions every week with exclusive deals</p>
-          </div>
-          <div className="w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
-            <Play size={14} className="text-gray-600 fill-gray-600 ml-0.5" />
-          </div>
-        </a>
-
-        {/* Products */}
         {loading ? (
-          <div className="flex justify-center py-24">
-            <Loader2 size={28} className="animate-spin text-gray-300" />
-          </div>
+          <div className="flex justify-center py-24"><Loader2 size={28} className="animate-spin text-gray-300" /></div>
         ) : error ? (
           <div className="text-center py-24 text-gray-400 text-sm">{error}</div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-24 text-gray-400 text-sm">
-            No products yet — check back after the next live session!
-          </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-            {products.map(p => <ProductCard key={p.id} product={p} />)}
-          </div>
-        )}
+          <>
+            {/* 🔥 SECTION 1: TOP 3 REELS WITH LINKED PRODUCTS */}
+            {topPosts.length > 0 && (
+              <div className="mb-20 space-y-12">
+                {topPosts.map(post => (
+                  <div key={post.id} className="bg-[#fafafa] rounded-3xl p-5 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-10 items-start border border-gray-100">
+                    
+                    {/* Reel Player Box */}
+                    <a href={post.instagram_url} target="_blank" rel="noopener noreferrer" 
+                       className="relative shrink-0 w-full lg:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden group shadow-[0_15px_35px_rgba(0,0,0,0.08)] block bg-gray-900">
+                      <img src={post.thumbnail || 'https://via.placeholder.com/300x500'} alt="Instagram Reel" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition duration-500 group-hover:scale-105" />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition flex items-center justify-center">
+                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 group-hover:scale-110 transition-transform">
+                          <Play size={20} className="ml-1" fill="currentColor"/>
+                        </div>
+                      </div>
+                      <div className="absolute top-4 left-4 bg-red-600 text-white text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full"></span> Featured
+                      </div>
+                    </a>
 
+                    {/* Linked Products */}
+                    <div className="flex-1 w-full pt-2">
+                      <h3 className="text-xl font-serif mb-6 text-gray-900">{post.title || 'Shop this look'}</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 lg:gap-6">
+                        {post.products.map((lp: any) => <ProductCard key={lp.id} product={toCardProduct(lp.product)} />)}
+                      </div>
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 🔥 SECTION 2: ALL EXCLUSIVE PRODUCTS GRID */}
+            <div>
+              <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-100">
+                <h3 className="text-lg font-bold text-gray-900 tracking-wide uppercase">More Live Styles</h3>
+                <span className="text-xs font-semibold tracking-widest text-gray-400 uppercase">{exclusiveProducts.length} Items</span>
+              </div>
+              
+              {exclusiveProducts.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 lg:gap-x-6 gap-y-10">
+                  {exclusiveProducts.map(p => <ProductCard key={p.id} product={p} />)}
+                </div>
+              ) : (
+                <div className="text-center py-20 text-gray-400 text-sm bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                  No additional live styles available right now.
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
