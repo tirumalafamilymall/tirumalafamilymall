@@ -29,7 +29,12 @@ export default function QuickViewModal({
   if (!product) return null
   
   const filteredRecent = recent.filter(p => p.id !== product.id)
-  const images = [product.image, product.image, product.image]
+  
+  // 🔥 THE FIX: Create guaranteed strings for TypeScript
+  const displayImage = product.image || product.images?.[0] || 'https://via.placeholder.com/400x500'
+  const displayHref = product.href || `/products/${product.id}`
+  
+  const images = [displayImage, displayImage, displayImage]
 
   return (
     <div
@@ -56,8 +61,8 @@ export default function QuickViewModal({
               id: product.id,
               name: product.name,
               price: product.price,
-              image: product.image,
-              href: product.href,
+              image: displayImage, // ✅ Uses safe fallback
+              href: displayHref,   // ✅ Uses safe fallback
             })
           }
           className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center hover:scale-110 transition"
@@ -178,15 +183,14 @@ export default function QuickViewModal({
 
                   const chosenSize = (product.hasSizes ?? true) ? selectedSize || undefined : undefined;
 
-                  // 🔥 FIXED: Now supplies variantId and productId to satisfy TypeScript
                   addItem({
-                    variantId: `${product.id}-${chosenSize || 'base'}`, // Composite fallback ID
+                    variantId: `${product.id}-${chosenSize || 'base'}`, 
                     productId: product.id,
                     name: product.name,
                     price: Number(product.price),
-                    image: product.image,
+                    image: displayImage, // ✅ Uses safe fallback
                     size: chosenSize,
-                    color: undefined // Quick view doesn't have color selection yet
+                    color: undefined 
                   })
 
                   openCart()
@@ -197,7 +201,7 @@ export default function QuickViewModal({
               </button>
 
               <Link
-                href={product.href}
+                href={displayHref} // ✅ Uses safe fallback so Next.js doesn't crash
                 className="flex-1 border py-3 rounded-xl text-sm text-center hover:bg-black hover:text-white transition"
               >
                 View Details
