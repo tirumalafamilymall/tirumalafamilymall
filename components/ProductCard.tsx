@@ -10,16 +10,15 @@ const PLACEHOLDER_COLORS = [
   '#f5ede4','#e8eff7','#f5e4ea','#e4f5ec','#f0e8f5','#f5f0e4','#e4edf5','#f5e9e4',
 ]
 
-// 🔥 FIX 1: Made 'image' optional and added 'images' and 'variants' arrays
 export interface Product {
   id: string; 
   name: string; 
   price: number; 
   originalPrice?: number;
-  image?: string; 
+  image: string;      // REQUIRED
   images?: string[]; 
   variants?: any[];
-  href?: string; 
+  href: string;       // REQUIRED
   badge?: string; 
   sold?: boolean; 
   colorIdx?: number;  
@@ -35,8 +34,7 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
     ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : null
   const placeholderBg = PLACEHOLDER_COLORS[idx % PLACEHOLDER_COLORS.length]
 
-  // 🔥 FIX 2: Smart Image Extraction Logic
-  // It checks: 1. Passed image string, 2. Parent images array, 3. Variant images array
+  // Smart Image Extraction Logic (Redundant safety fallback)
   const parentImage = product.images?.[0]
   const variantImage = product.variants?.find((v: any) => v.image)?.image
   const displayImage = product.image || parentImage || variantImage || 'https://via.placeholder.com/400x500'
@@ -52,8 +50,8 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
       >
         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-300" />
         
-        {/* 🔥 FIX 3: Use the newly calculated displayImage */}
-        <Link href={product.href || `/products/${product.id}`} className="block w-full h-full">
+        {/* 🔥 FIX: Safely use product.href without fallbacks */}
+        <Link href={product.href} className="block w-full h-full">
           <img
             src={displayImage}
             alt={product.name}
@@ -69,7 +67,8 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
               e.stopPropagation()
 
               if (window.innerWidth < 768) {
-                window.location.href = product.href || `/products/${product.id}`
+                // 🔥 FIX: Safely use product.href without fallbacks
+                window.location.href = product.href
               } else {
                 openQuickView(product)
               }
@@ -102,7 +101,8 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
       </div>
 
       {/* Info */}
-      <Link href={product.href || `/products/${product.id}`} className="block">
+      {/* 🔥 FIX: Safely use product.href without fallbacks */}
+      <Link href={product.href} className="block">
         <p className="text-[15px] text-gray-900 font-medium leading-snug line-clamp-2 mt-2 hover:text-gray-900 transition-colors tracking-[0.02em]">{product.name}</p>
         <div className="flex items-center gap-2">
           <span className="text-[15px] font-semibold text-black">₹{product.price?.toLocaleString('en-IN') || 0}</span>

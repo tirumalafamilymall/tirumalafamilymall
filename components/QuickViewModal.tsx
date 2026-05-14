@@ -30,11 +30,8 @@ export default function QuickViewModal({
   
   const filteredRecent = recent.filter(p => p.id !== product.id)
   
-  // 🔥 THE FIX: Create guaranteed strings for TypeScript
-  const displayImage = product.image || product.images?.[0] || 'https://via.placeholder.com/400x500'
-  const displayHref = product.href || `/products/${product.id}`
-  
-  const images = [displayImage, displayImage, displayImage]
+  // ✅ Clean array using the strictly required image string
+  const images = [product.image, product.image, product.image]
 
   return (
     <div
@@ -61,8 +58,8 @@ export default function QuickViewModal({
               id: product.id,
               name: product.name,
               price: product.price,
-              image: displayImage, // ✅ Uses safe fallback
-              href: displayHref,   // ✅ Uses safe fallback
+              image: product.image, // ✅ Safely passing the guaranteed string
+              href: product.href,   // ✅ Safely passing the guaranteed string
             })
           }
           className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-white/90 shadow-md flex items-center justify-center hover:scale-110 transition"
@@ -188,7 +185,7 @@ export default function QuickViewModal({
                     productId: product.id,
                     name: product.name,
                     price: Number(product.price),
-                    image: displayImage, // ✅ Uses safe fallback
+                    image: product.image, // ✅ Safely passing the guaranteed string
                     size: chosenSize,
                     color: undefined 
                   })
@@ -201,7 +198,7 @@ export default function QuickViewModal({
               </button>
 
               <Link
-                href={displayHref} // ✅ Uses safe fallback so Next.js doesn't crash
+                href={product.href} // ✅ Safely passing the guaranteed string, Next.js won't crash
                 className="flex-1 border py-3 rounded-xl text-sm text-center hover:bg-black hover:text-white transition"
               >
                 View Details

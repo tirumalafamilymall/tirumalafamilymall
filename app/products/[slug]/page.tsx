@@ -50,8 +50,14 @@ export default function ProductPage() {
         const p = res.product || res
         setProduct(p)
 
-        if (p) {
-          const recentPayload = { id: p.id, name: p.name, price: p.variants?.[0]?.base_price || 0, image: p.images?.[0] }
+if (p) {
+          const recentPayload = { 
+            id: p.id, 
+            name: p.name, 
+            price: p.variants?.[0]?.base_price || 0, 
+            image: p.images?.[0] || 'https://via.placeholder.com/400x500', // 🔥 Fallback
+            href: `/products/${p.slug || p.id}` // 🔥 ADDED: Required by interface
+          }
           setRecent(addToRecent(recentPayload))
         }
 
