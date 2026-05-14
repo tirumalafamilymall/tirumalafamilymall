@@ -9,7 +9,6 @@ const PLACEHOLDER_COLORS = [
   '#f5ede4','#e8eff7','#f5e4ea','#e4f5ec','#f0e8f5','#f5f0e4','#e4edf5','#f5e9e4',
 ]
 
-// 🔥 Added brand and subcategory to the interface
 export interface Product {
   id: string; 
   name: string; 
@@ -21,8 +20,10 @@ export interface Product {
   href: string;       
   badge?: string; 
   sold?: boolean; 
-  brand?: string;
-  subcategory?: string;
+  colorIdx?: number;    
+  hasSizes?: boolean;   
+  brand?: string;     
+  subcategory?: string; 
 }
 
 export default function ProductCard({ product, idx = 0 }: { product: Product; idx?: number }) {
