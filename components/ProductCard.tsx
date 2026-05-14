@@ -30,7 +30,7 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
 
   const parentImage = product.images?.[0]
   const variantImage = product.variants?.find((v: any) => v.image)?.image
-  const displayImage = product.image || parentImage || variantImage || 'https://via.placeholder.com/400x500'
+  const displayImage = product.image || variantImage || parentImage || ''
 
   return (
     <div className="group rounded-2xl overflow-hidden bg-white shadow-[0_8px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300">
@@ -38,8 +38,11 @@ export default function ProductCard({ product, idx = 0 }: { product: Product; id
       <Link href={product.href} className="block relative overflow-hidden rounded-xl mb-3" style={{ aspectRatio: '3/4' }}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-300 z-10" />
         
-        <img src={displayImage} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
-
+{displayImage ? (
+  <img src={displayImage} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+) : (
+  <div className="w-full h-full flex items-center justify-center text-5xl opacity-20">👗</div>
+)}
         {/* Top badges (Kept these as they show important status) */}
         <div className="absolute top-2 left-2 flex flex-col gap-1 z-20">
           {product.sold && <span className="text-[9.5px] font-semibold tracking-[0.12em] uppercase bg-gray-800 text-white px-2 py-0.5 rounded">Sold Out</span>}
