@@ -22,28 +22,21 @@ const PRICE_RANGES = [
 
 function toCardProduct(p: any): Product {
   const variants = p.variants || []
-  const stock = p.stock !== undefined 
-    ? p.stock 
-    : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
-    
-  const price = p.base_price !== undefined 
-    ? p.base_price 
-    : (variants[0]?.base_price || 0)
-
-  // Extract the variant image so it doesn't return undefined
+  const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
+  const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
   const variantImage = variants.find((v: any) => v.image)?.image;
 
   return {
     id:            p.id, 
     name:          p.name,
     price:         Number(price), 
-    // 🔥 Guaranteeing a string to satisfy TypeScript
     image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
     images:        p.images || [], 
     variants:      variants,       
-    // 🔥 Guaranteeing a string to satisfy TypeScript
     href:          `/products/${p.slug || p.id}`,
     badge:         stock <= 0 ? 'Sold Out' : undefined,
+    brand:         p.brand || undefined,            // 🔥 Added
+    subcategory:   p.subcategory || undefined,      // 🔥 Added
   }
 }
 
@@ -54,7 +47,6 @@ export default function CollectionPage() {
   const deriveLabel = (s: string) => s === 'all' ? 'All Products' : s.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
   const label = deriveLabel(rawSlug)
   
-  // Differentiate between Department (Men/Women/Kids) vs Category (Shirts/Sarees)
   const isDepartment = ['Women', 'Men', 'Kids'].includes(label)
   const activeDepartment = isDepartment ? label.toUpperCase() : undefined
   const activeCategory = !isDepartment && rawSlug !== 'all' ? label : undefined
