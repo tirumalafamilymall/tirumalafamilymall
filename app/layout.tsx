@@ -1,8 +1,6 @@
 import type { Metadata } from 'next'
 import { Poppins, Cormorant_Garamond } from 'next/font/google'
 import './globals.css'
-
-import { QuickViewProvider } from '@/context/QuickViewContext'
 import ClientLayout from './ClientLayout'
 
 const poppins = Poppins({
@@ -29,11 +27,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${poppins.variable} ${cormorant.variable}`}>
       <body className="bg-white text-[#111] antialiased font-sans">
 
-        <QuickViewProvider>
           <ClientLayout>
             {children}
           </ClientLayout>
-        </QuickViewProvider>
 
       </body>
     </html>
