@@ -60,7 +60,7 @@ export const useCartStore = create<CartStore>()(
               productId: i.variant?.product_id || i.variant?.product?.id,
               name: i.variant?.product?.name,
               price: Number(i.variant?.base_price || 0), // Handle Decimal
-              image: i.variant?.product?.images?.[0] || '',
+              image: i.variant?.image || i.variant?.product?.images?.[0] || '',
               qty: i.quantity,
               size: i.variant?.size || undefined,
               color: i.variant?.color || undefined
