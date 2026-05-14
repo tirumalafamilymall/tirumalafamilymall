@@ -6,7 +6,6 @@ import Footer from '@/components/Footer'
 import CartDrawer from '@/components/CartDrawer'
 import WishlistDrawer from '@/components/WishlistDrawer'
 import BottomNav from '@/components/BottomNav'
-import QuickViewModalWrapper from '@/components/QuickViewModalWrapper'
 
 export default function ClientLayout({ children }: any) {
   const pathname = usePathname()
@@ -23,7 +22,6 @@ export default function ClientLayout({ children }: any) {
       {!isAdmin && <Footer />}
       {!isAdmin && <CartDrawer />}
       {!isAdmin && <WishlistDrawer />}
-      {!isAdmin && <QuickViewModalWrapper />}
     </>
   )
 }
