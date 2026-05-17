@@ -92,16 +92,23 @@ export default function InstaLivePage() {
                 {topPosts.map(post => (
                   <div key={post.id} className="bg-[#fafafa] rounded-3xl p-5 lg:p-8 flex flex-col lg:flex-row gap-6 lg:gap-10 items-start border border-gray-100">
                     
-                    {/* Reel Player Box */}
+                    {/* Reel Player Box (Updated with Video Support) */}
                     <a href={post.instagram_url} target="_blank" rel="noopener noreferrer" 
                        className="relative shrink-0 w-full lg:w-[260px] aspect-[9/16] rounded-2xl overflow-hidden group shadow-[0_15px_35px_rgba(0,0,0,0.08)] block bg-gray-900">
-                      <img src={post.thumbnail || 'https://via.placeholder.com/300x500'} alt="Instagram Reel" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition duration-500 group-hover:scale-105" />
-                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition flex items-center justify-center">
-                        <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center text-white border border-white/30 group-hover:scale-110 transition-transform">
-                          <Play size={20} className="ml-1" fill="currentColor"/>
+                      
+                      {post.thumbnail?.includes('.mp4') ? (
+                        <video src={post.thumbnail} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition duration-500 group-hover:scale-105" />
+                      ) : (
+                        <img src={post.thumbnail || 'https://via.placeholder.com/300x500'} alt="Instagram Reel" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition duration-500 group-hover:scale-105" />
+                      )}
+
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition flex items-center justify-center">
+                        <div className="bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full text-[11px] font-bold tracking-[0.2em] border border-white/30 group-hover:scale-110 transition-transform shadow-lg">
+                          WATCH FULL REEL
                         </div>
                       </div>
-                      <div className="absolute top-4 left-4 bg-red-600 text-white text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 animate-pulse">
+                      
+                      <div className="absolute top-4 left-4 bg-red-600 text-white text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full flex items-center gap-1.5 animate-pulse shadow-md">
                         <span className="w-1.5 h-1.5 bg-white rounded-full"></span> Featured
                       </div>
                     </a>
