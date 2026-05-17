@@ -31,28 +31,38 @@ export async function authHeaders(): Promise<HeadersInit> {
 
 /* ─── Register ─── */
 export async function registerUser(name: string, email: string, password: string) {
-  // 1. Create the account in Firebase
+
   const cred = await createUserWithEmailAndPassword(auth, email, password)
   
-  // 2. Generate a beautiful default avatar based on their Name!
   const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random&color=fff&bold=true`
 
-  // 3. Attach the Name and the Avatar to their Firebase Profile instantly
   await updateProfile(cred.user, { 
     displayName: name,
     photoURL: defaultAvatar
   })
 
-  // 4. Get the fresh token
   const token = await cred.user.getIdToken()
 
-  // 5. Sync with backend (Send the token AND the explicit name)
+  let guestCartPayload: any[] = []
+  try {
+    const rawLocalData = localStorage.getItem('tfm-cart')
+    if (rawLocalData) {
+      const parsed = JSON.parse(rawLocalData)
+      if (parsed?.state?.items) {
+        guestCartPayload = parsed.state.items
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to gather local guest cart context for migration:", e)
+  }
+
   const res = await fetch(`${API_BASE}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ 
       firebase_token: token,
-      name: name // <-- We explicitly send the name to the backend here
+      name: name,
+      guest_cart: guestCartPayload 
     }),
   })
 
@@ -62,6 +72,7 @@ export async function registerUser(name: string, email: string, password: string
 
   return cred.user
 }
+
 /* ─── Login ─── */
 export async function loginUser(email: string, password: string) {
   const cred = await signInWithEmailAndPassword(auth, email, password)
