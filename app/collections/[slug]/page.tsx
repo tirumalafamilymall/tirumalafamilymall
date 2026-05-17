@@ -20,18 +20,29 @@ const PRICE_RANGES = [
   { label: 'Above ₹1,500',      min: 1500, max: 99999 },
 ]
 
+// Enhanced database payload parser extracting multi-type images securely
 function toCardProduct(p: any): Product {
   const variants = p.variants || []
   const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
   const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
+  
+  let mainImage = null;
+  if (Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
+    mainImage = p.images[0];
+  } else if (typeof p.images === 'string' && p.images.length > 5) {
+    try { 
+      const parsed = JSON.parse(p.images); 
+      if (Array.isArray(parsed)) mainImage = parsed[0]; 
+    } catch(e) {}
+  }
   const variantImage = variants.find((v: any) => v.image)?.image;
 
   return {
-    id:            p.id, 
+    id:           p.id, 
     name:          p.name,
     price:         Number(price), 
-    image:         p.images?.[0] || variantImage || 'https://via.placeholder.com/400x500', 
-    images:        p.images || [], 
+    image:         mainImage || variantImage || 'https://via.placeholder.com/400x500?text=No+Image', 
+    images:        Array.isArray(p.images) ? p.images : [], 
     variants:      variants,       
     href:          `/products/${p.slug || p.id}`,
     badge:         stock <= 0 ? 'Sold Out' : undefined,
@@ -60,7 +71,6 @@ export default function CollectionPage() {
   const [inStock,      setInStock]      = useState(false)
   const [priceRange,   setPriceRange]   = useState<{ min: number; max: number } | null>(null)
   
-  // 🔥 NEW FILTER STATES
   const [selectedBrand, setSelectedBrand] = useState<string | null>(null)
   const [selectedSub,   setSelectedSub]   = useState<string | null>(null)
 
@@ -83,7 +93,6 @@ export default function CollectionPage() {
         in_stock:    inStock || undefined,
         min_price:   priceRange?.min,
         max_price:   priceRange?.max === 99999 ? undefined : priceRange?.max,
-        // 🔥 PASS NEW FILTERS TO API
         brand:       selectedBrand || undefined,
         subcategory: selectedSub || undefined,
       })
@@ -112,7 +121,6 @@ export default function CollectionPage() {
 
   const hasMore = products.length < total
 
-  // 🔥 DYNAMICALLY EXTRACT AVAILABLE BRANDS AND SUBCATEGORIES FOR THE UI
   const availableBrands = Array.from(new Set(products.map(p => p.brand).filter(Boolean))) as string[]
   const availableSubcategories = Array.from(new Set(products.map(p => p.subcategory).filter(Boolean))) as string[]
 
@@ -140,7 +148,7 @@ export default function CollectionPage() {
         )}
       </div>
 
-      {/* 🔥 BRAND FILTER */}
+      {/* BRAND FILTER */}
       {availableBrands.length > 0 && (
         <div>
           <button onClick={() => setOpenFilter(openFilter === 'brand' ? null : 'brand')} className="w-full flex items-center justify-between py-4 text-left">
@@ -163,7 +171,7 @@ export default function CollectionPage() {
         </div>
       )}
 
-      {/* 🔥 SUBCATEGORY FILTER */}
+      {/* SUBCATEGORY FILTER */}
       {availableSubcategories.length > 0 && (
         <div>
           <button onClick={() => setOpenFilter(openFilter === 'sub' ? null : 'sub')} className="w-full flex items-center justify-between py-4 text-left">
