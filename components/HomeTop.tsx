@@ -113,52 +113,119 @@ export function ShopByCategory({ categories }: { categories: any[] }) {
   )
 }
 
-// ─── 3. DISCOVER YOUR STYLE (DYNAMIZED) ──────────────────────────
+// ─── 3. DISCOVER YOUR STYLE (DYNAMIZED & UPGRADED) ──────────────────────────
 export function OfferBanner({ images }: { images: { women: string, men: string, kids: string } }) {
   return (
-    <section className="py-20 bg-white">
-      <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-12">
-        <div className="text-center mb-14">
-          <p className="text-[10px] tracking-[0.5em] uppercase text-gray-400 mb-3">Collections</p>
-          <h2 className="heading-serif italic text-[30px] sm:text-[34px] md:text-[38px] font-normal tracking-[0.06em] leading-[1.1] text-black">Discover Your Style</h2>
-          <div className="w-12 h-[2px] bg-[#CC0000] mt-4 mx-auto rounded-full"></div>
+    <section className="py-16 lg:py-24 bg-white border-t border-gray-50">
+      <div className="w-full max-w-[1400px] mx-auto px-5 lg:px-10">
+        
+        {/* SECTION HEADER */}
+        <div className="text-center mb-12 lg:mb-16">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-gray-400 font-semibold mb-2.5">
+            Collections
+          </p>
+          <h2 className="heading-serif italic text-3xl sm:text-4xl md:text-[42px] tracking-wide text-gray-900 font-normal leading-tight">
+            Discover Your Style
+          </h2>
+          <div className="w-12 h-[2px] bg-[#CC0000] mt-5 mx-auto rounded-full"></div>
         </div>
 
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* WOMEN */}
-            <Link href="/collections/women" className="group relative overflow-hidden rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300">
-              <img src={images?.women || 'https://via.placeholder.com/1200x800?text=Women'} alt="Women Collection" className="w-full h-[260px] sm:h-[300px] object-cover group-hover:scale-[1.05] transition duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/70 transition" />
-              <div className="absolute bottom-6 left-6 text-white">
-                <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-2">New Arrivals</p>
-                <h3 className="heading-serif text-[28px] md:text-[32px] mb-2">Women's Edit</h3>
-                <span className="text-[12px] tracking-[0.2em] uppercase border-b border-white pb-1">Shop Now</span>
+        {/* BANNER LAYOUT GRID */}
+        <div className="space-y-6 lg:space-y-8">
+          
+          {/* TOP SPLIT PAIR: WOMEN & MEN */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 lg:gap-8">
+
+            {/* WOMEN CARD */}
+            <Link
+              href="/collections/women"
+              className="group relative overflow-hidden rounded-[24px] shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.1)] transition-all duration-500 ease-out block bg-gray-950 aspect-[4/3] sm:h-[320px] lg:h-[380px] w-full"
+            >
+              <img
+                src={images?.women || 'https://via.placeholder.com/1200x800?text=Women'}
+                alt="Women Collection"
+                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-[800ms] ease-out opacity-90 group-hover:opacity-100"
+              />
+
+              {/* HIGH-FASHION CINEMATIC OVERLAYS */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-30 transition-opacity duration-500" />
+
+              {/* CARD DETAILS */}
+              <div className="absolute bottom-6 left-6 lg:bottom-8 lg:left-8 right-6 text-white z-10 pointer-events-none">
+                <p className="text-[9px] tracking-[0.3em] uppercase font-bold text-gray-300 mb-1.5 opacity-90">
+                  New Arrivals
+                </p>
+                <h3 className="heading-serif text-2xl lg:text-3xl font-normal tracking-wide mb-3 transform group-hover:translate-x-1 transition-transform duration-300">
+                  Women's Edit
+                </h3>
+                <div className="inline-flex items-center text-[11px] font-bold tracking-[0.2em] uppercase">
+                  <span className="border-b border-white/60 pb-0.5 group-hover:border-white group-hover:text-red-400 transition-colors duration-300">
+                    Shop Now →
+                  </span>
+                </div>
               </div>
             </Link>
 
-            {/* MEN */}
-            <Link href="/collections/men" className="group relative overflow-hidden rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300">
-              <img src={images?.men || 'https://via.placeholder.com/1200x800?text=Men'} alt="Men Collection" className="w-full h-[260px] sm:h-[300px] object-cover group-hover:scale-[1.05] transition duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent group-hover:from-black/70 transition" />
-              <div className="absolute bottom-6 left-6 text-white">
-                <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-2">MODERN CLASSICS</p>
-                <h3 className="heading-serif text-[26px] md:text-[30px] mb-2">Men's Edit</h3>
-                <span className="text-[12px] tracking-[0.2em] uppercase border-b border-white pb-1">Shop Now</span>
+            {/* MEN CARD */}
+            <Link
+              href="/collections/men"
+              className="group relative overflow-hidden rounded-[24px] shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.1)] transition-all duration-500 ease-out block bg-gray-950 aspect-[4/3] sm:h-[320px] lg:h-[380px] w-full"
+            >
+              <img
+                src={images?.men || 'https://via.placeholder.com/1200x800?text=Men'}
+                alt="Men Collection"
+                className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-[800ms] ease-out opacity-90 group-hover:opacity-100"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/10 transition-opacity duration-500" />
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-30 transition-opacity duration-500" />
+
+              <div className="absolute bottom-6 left-6 lg:bottom-8 lg:left-8 right-6 text-white z-10 pointer-events-none">
+                <p className="text-[9px] tracking-[0.3em] uppercase font-bold text-gray-300 mb-1.5 opacity-90">
+                  Modern Classics
+                </p>
+                <h3 className="heading-serif text-2xl lg:text-3xl font-normal tracking-wide mb-3 transform group-hover:translate-x-1 transition-transform duration-300">
+                  Men's Edit
+                </h3>
+                <div className="inline-flex items-center text-[11px] font-bold tracking-[0.2em] uppercase">
+                  <span className="border-b border-white/60 pb-0.5 group-hover:border-white group-hover:text-red-400 transition-colors duration-300">
+                    Shop Now →
+                  </span>
+                </div>
               </div>
             </Link>
           </div>
 
-          {/* KIDS */}
-          <Link href="/collections/kids" className="group relative overflow-hidden rounded-xl shadow-[0_10px_35px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300">
-            <img src={images?.kids || 'https://via.placeholder.com/1400x500?text=Kids'} alt="Kids Collection" className="w-full h-[220px] sm:h-[260px] object-cover group-hover:scale-[1.05] transition duration-700" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:bg-black/35 transition" />
-            <div className="absolute bottom-6 left-6 text-white">
-              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-2">PLAYFUL PICKS</p>
-              <h3 className="heading-serif text-[26px] md:text-[30px] mb-2">Kids Edit</h3>
-              <span className="text-[12px] tracking-[0.2em] uppercase border-b border-white pb-1">Shop Now</span>
+          {/* LOWER FULL-WIDTH CANVAS: KIDS */}
+          <Link
+            href="/collections/kids"
+            className="group relative overflow-hidden rounded-[24px] shadow-[0_15px_35px_rgba(0,0,0,0.04)] hover:shadow-[0_25px_50px_rgba(0,0,0,0.1)] transition-all duration-500 ease-out block bg-gray-950 h-[200px] sm:h-[240px] lg:h-[280px] w-full"
+          >
+            <img
+              src={images?.kids || 'https://via.placeholder.com/1400x500?text=Kids'}
+              alt="Kids Collection"
+              className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-[1000ms] ease-out opacity-90 group-hover:opacity-100"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/5 transition-opacity duration-500" />
+            <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-20 transition-opacity duration-500" />
+
+            <div className="absolute bottom-6 left-6 lg:bottom-8 lg:left-8 right-6 text-white z-10 pointer-events-none">
+              <p className="text-[9px] tracking-[0.3em] uppercase font-bold text-gray-300 mb-1.5 opacity-90">
+                Playful Picks
+              </p>
+              <h3 className="heading-serif text-2xl lg:text-3xl font-normal tracking-wide mb-3 transform group-hover:translate-x-1 transition-transform duration-300">
+                Kids Edit
+              </h3>
+              <div className="inline-flex items-center text-[11px] font-bold tracking-[0.2em] uppercase">
+                <span className="border-b border-white/60 pb-0.5 group-hover:border-white group-hover:text-red-400 transition-colors duration-300">
+                  Shop Now →
+                </span>
+              </div>
             </div>
           </Link>
+
         </div>
       </div>
     </section>
