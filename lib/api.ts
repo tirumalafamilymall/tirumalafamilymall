@@ -442,3 +442,10 @@ export const schedulePickup = (orderId: string, shipmentId: string) =>
   })
 
 export const getShippingQueue = () => adminFetch('/api/admin/shipping')
+
+/* ─────────────────────────────────────────
+   STOREFRONT (PUBLIC)
+───────────────────────────────────────── */
+
+export const getStorefrontConfig = () => 
+  apiFetch('/api/storefront')
