@@ -2,9 +2,8 @@
 import { useRef, useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Heart, Share2, Loader2, Plus, Minus } from 'lucide-react' // 🔥 Added Plus and Minus icons
-
-import { getProduct, getProducts, addToWishlist, removeFromWishlist } from '@/lib/api'
+import { Heart, Share2, Loader2, Plus, Minus, MapPin } from 'lucide-react' 
+import { getProduct, getProducts, addToWishlist, removeFromWishlist, checkServiceability } from '@/lib/api'
 import { useCartStore, useWishlistStore } from '@/store'
 import { addToRecent } from '@/lib/recent'
 import { Product as StoreProduct } from '@/components/ProductCard'
@@ -33,6 +32,10 @@ export default function ProductPage() {
   
   // 🔥 NEW STATE: Quantity tracker
   const [quantity, setQuantity] = useState(1)
+
+  const [pincode, setPincode] = useState('')
+  const [checkingPincode, setCheckingPincode] = useState(false)
+  const [pincodeResult, setPincodeResult] = useState<{ serviceable?: boolean, cost?: number, days?: number, error?: string } | null>(null)
 
   const [variantImageOverride, setVariantImageOverride] = useState<string | null>(null)
   const [zoomOpen, setZoomOpen] = useState(false)
@@ -133,6 +136,28 @@ export default function ProductPage() {
   const variantImages = variants.map((v: any) => v.image).filter(Boolean)
   const allImages = Array.from(new Set([...parentImages, ...variantImages])) 
   const displayImage = variantImageOverride || allImages[0] || 'https://placehold.co/800x1000?text=No+Image'
+
+  // 🔥 NEW: Pincode Handler
+  const handleCheckPincode = async () => {
+    if (pincode.length !== 6 || isNaN(Number(pincode))) {
+      setPincodeResult({ error: 'Please enter a valid 6-digit pincode.' })
+      return
+    }
+    setCheckingPincode(true)
+    setPincodeResult(null)
+    try {
+      const res = await checkServiceability(pincode)
+      if (res.is_serviceable) {
+        setPincodeResult({ serviceable: true, cost: res.shipping_cost, days: res.estimated_days })
+      } else {
+        setPincodeResult({ serviceable: false, error: "Sorry, we don't deliver to this pincode yet." })
+      }
+    } catch (e: any) {
+      setPincodeResult({ error: e.message || 'Failed to verify pincode.' })
+    } finally {
+      setCheckingPincode(false)
+    }
+  }
 
   const handleAddToCart = async (redirectCheckout = false) => {
     if ((availableSizes.length > 0 && !selectedSize) || (availableColors.length > 0 && !selectedColor)) {
@@ -288,8 +313,49 @@ export default function ProductPage() {
 
               {selectionError && <p className="text-[12px] text-red-500 mt-4">Please select all required options.</p>}
 
-              <div className="border-t border-gray-200 my-6"></div>
+<div className="border-t border-gray-200 my-6"></div>
 
+              {/* 🔥 NEW: PINCODE CHECKER UI */}
+              <div className="mb-8">
+                <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3 flex items-center gap-1.5">
+                  <MapPin size={14} /> Check Delivery
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    maxLength={6}
+                    placeholder="Enter 6-digit Pincode" 
+                    value={pincode}
+                    onChange={(e) => {
+                      setPincode(e.target.value)
+                      setPincodeResult(null) // Reset result when typing
+                    }}
+                    className="flex-1 border border-gray-300 px-4 py-3 rounded-xl text-[13px] outline-none focus:border-black transition"
+                  />
+                  <button 
+                    onClick={handleCheckPincode}
+                    disabled={checkingPincode || pincode.length !== 6}
+                    className="bg-gray-100 hover:bg-gray-200 text-black px-6 py-3 rounded-xl text-[12px] font-semibold tracking-wider uppercase transition disabled:opacity-50 min-w-[100px] flex justify-center items-center"
+                  >
+                    {checkingPincode ? <Loader2 size={16} className="animate-spin" /> : 'Check'}
+                  </button>
+                </div>
+
+                {/* Display Results */}
+                {pincodeResult && (
+                  <div className="mt-3 text-[12.5px] p-3 rounded-xl bg-gray-50 border border-gray-100">
+                    {pincodeResult.error ? (
+                      <span className="text-red-500 font-medium">{pincodeResult.error}</span>
+                    ) : pincodeResult.serviceable ? (
+                      <div className="flex flex-col gap-1 text-green-700">
+                        <span className="font-semibold text-green-600">✓ Delivery Available</span>
+                        {pincodeResult.days && <span>Estimated Delivery: {pincodeResult.days} - {pincodeResult.days + 2} Days</span>}
+                        <span>Shipping Cost: ₹{pincodeResult.cost}</span>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
               <div className="space-y-3">
                 <button onClick={() => handleAddToCart(false)} disabled={isAdding || isOutOfStock}
                   className="w-full py-4 rounded-full bg-black text-white text-[12px] tracking-[0.2em] uppercase shadow-[0_10px_25px_rgba(0,0,0,0.2)] hover:bg-[#111] active:scale-95 transition-all duration-300 disabled:opacity-50">
