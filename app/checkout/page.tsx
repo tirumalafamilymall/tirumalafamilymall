@@ -43,7 +43,8 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const [shippingCost, setShippingCost] = useState<number | null>(null)
+const [shippingCost, setShippingCost] = useState<number | null>(null)
+  const [estimatedDays, setEstimatedDays] = useState<number | null>(null) 
   const [isCheckingShipping, setIsCheckingShipping] = useState(false)
 
   useEffect(() => {
@@ -70,8 +71,9 @@ export default function CheckoutPage() {
             return;
           }
           
-          if (data.is_serviceable) {
+if (data.is_serviceable) {
             setShippingCost(Number(data.shipping_cost));
+            setEstimatedDays(Number(data.estimated_days)); // 🔥 ADD THIS LINE
             setError(''); 
           } else {
             setError("Sorry, we don't deliver to this pincode yet.");
@@ -242,8 +244,15 @@ export default function CheckoutPage() {
               <span>Subtotal</span>
               <span>₹{Number(totalPrice()).toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-[14px]">
-              <span className="text-gray-600">Shipping</span>
+<div className="flex justify-between text-[14px]">
+              <span className="text-gray-600 flex flex-col">
+                Shipping
+                {estimatedDays && (
+                  <span className="text-[10px] text-green-600 font-bold tracking-wide mt-0.5">
+                    Est. Delivery: {estimatedDays} - {estimatedDays + 2} Days
+                  </span>
+                )}
+              </span>
               <span className="text-gray-900 font-bold">
                 {isCheckingShipping ? <span className="animate-pulse text-gray-300">Calculating...</span> : shippingCost === null ? '—' : `₹${displayShipping}`}
               </span>

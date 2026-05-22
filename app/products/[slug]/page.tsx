@@ -148,8 +148,8 @@ export default function ProductPage() {
     try {
       const res = await checkServiceability(pincode)
       if (res.is_serviceable) {
-        setPincodeResult({ serviceable: true, cost: res.shipping_cost, days: res.estimated_days })
-      } else {
+        setPincodeResult({ serviceable: true, cost: res.shipping_cost, days: Number(res.estimated_days) })
+      }else {
         setPincodeResult({ serviceable: false, error: "Sorry, we don't deliver to this pincode yet." })
       }
     } catch (e: any) {
@@ -349,7 +349,7 @@ export default function ProductPage() {
                     ) : pincodeResult.serviceable ? (
                       <div className="flex flex-col gap-1 text-green-700">
                         <span className="font-semibold text-green-600">✓ Delivery Available</span>
-                        {pincodeResult.days && <span>Estimated Delivery: {pincodeResult.days} - {pincodeResult.days + 2} Days</span>}
+                       {pincodeResult.days && <span>Estimated Delivery: {pincodeResult.days} - {pincodeResult.days + 2} Days</span>}
                         <span>Shipping Cost: ₹{pincodeResult.cost}</span>
                       </div>
                     ) : null}
