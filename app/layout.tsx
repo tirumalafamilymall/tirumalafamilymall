@@ -18,7 +18,7 @@ const cormorant = Cormorant_Garamond({
 })
 
 export const metadata: Metadata = {
-  title: 'Tirumala Family Mall — Tekkali, Srikakulam',
+  title: 'Tirumala Family Mall',
   description: 'Premium fashion...',
 }
 

@@ -46,7 +46,6 @@ export default function Footer() {
 
             <ul className="space-y-3">
               {[
-                ['Home', '/'],
                 ['Women', '/collections/women'],
                 ['Men', '/collections/men'],
                 ['Kids', '/collections/kids'],
@@ -74,10 +73,10 @@ export default function Footer() {
               {[
                 ['Sarees', '/collections/sarees'],
                 ['Kurtis', '/collections/kurtis'],
-                ['Dress Materials', '/collections/dress-materials'],
-                ['Nightwear', '/collections/nightwear'],
-                ['Men Shirts', '/collections/shirts'],
-                ['Kids Frocks', '/collections/girls-frocks'],
+                ['Leggings', '/collections/leggings'],
+                ['Jeans', '/collections/jeans'],
+                ['Shirts', '/collections/shirts'],
+                ['Kids Frocks', '/collections/frocks'],
               ].map(([l, h]) => (
                 <li key={l}>
                   <Link
@@ -153,24 +152,6 @@ export default function Footer() {
           <p className="text-[12px] text-gray-600">
             © {new Date().getFullYear()} Tirumala Family Mall
           </p>
-
-          <div className="flex flex-wrap justify-center sm:justify-end gap-6">
-            {[
-              ['Privacy', '/privacy'],
-              ['Terms', '/terms'],
-              ['Shipping', '/shipping'],
-              ['Returns', '/returns'],
-              ['Help', '/help'],
-            ].map(([l, h]) => (
-              <Link
-                key={l}
-                href={h}
-                className="text-[12px] text-gray-600 hover:text-white transition duration-300"
-              >
-                {l}
-              </Link>
-            ))}
-          </div>
 
         </div>
 
