@@ -21,6 +21,7 @@ export default function Footer() {
             <img
               src="/logo1.png"
               className="h-20 sm:h-24 mx-auto sm:mx-0 object-contain mb-5 transition duration-500 hover:scale-105"
+              alt="Tirumala Family Mall Logo"
             />
 
             {/* 🔥 BIGGER LOGO TEXT */}
@@ -115,6 +116,7 @@ export default function Footer() {
               <a
                 href="https://instagram.com/tirumalafamilymall777"
                 target="_blank"
+                rel="noreferrer"
                 className="w-10 h-10 flex items-center justify-center border border-white/20 rounded-full hover:border-[#CC0000] hover:text-white hover:scale-110 transition-all duration-300"
               >
                 <Instagram size={18} />
@@ -123,6 +125,7 @@ export default function Footer() {
               <a
                 href="https://wa.me/919966248223"
                 target="_blank"
+                rel="noreferrer"
                 className="w-10 h-10 flex items-center justify-center border border-white/20 rounded-full hover:border-[#CC0000] hover:text-white hover:scale-110 transition-all duration-300"
               >
                 <Phone size={18} />
@@ -134,6 +137,7 @@ export default function Footer() {
             <a
               href="https://wa.me/919966248223"
               target="_blank"
+              rel="noreferrer"
               className="inline-flex items-center gap-2 px-7 py-3 bg-[#CC0000] text-white text-[12px] rounded-full hover:bg-black hover:scale-[1.05] transition-all duration-300"
             >
               Chat on WhatsApp →
@@ -146,12 +150,28 @@ export default function Footer() {
         {/* 🔥 DIVIDER */}
         <div className="h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent mb-6" />
 
-        {/* 🔥 BOTTOM */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+        {/* 🔥 BOTTOM COMPLIANCE BAR */}
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-6 text-center lg:text-left">
 
           <p className="text-[12px] text-gray-600">
-            © {new Date().getFullYear()} Tirumala Family Mall
+            © {new Date().getFullYear()} Tirumala Family Mall. All rights reserved.
           </p>
+
+          {/* 🔥 RAZORPAY MANDATORY POLICY LINKS */}
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-[12px] text-gray-500">
+            <Link href="/privacy-policy" className="hover:text-white transition duration-300 hover:underline">
+              Privacy Policy
+            </Link>
+            <Link href="/terms-and-conditions" className="hover:text-white transition duration-300 hover:underline">
+              Terms & Conditions
+            </Link>
+            <Link href="/refund-policy" className="hover:text-white transition duration-300 hover:underline">
+              Cancellation & Refund Policy
+            </Link>
+            <Link href="/shipping-policy" className="hover:text-white transition duration-300 hover:underline">
+              Shipping & Delivery Policy
+            </Link>
+          </div>
 
         </div>
 
