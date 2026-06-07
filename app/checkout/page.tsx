@@ -74,16 +74,16 @@ export default function CheckoutPage() {
     return () => unsub()
   }, [])
 
-  // 🔥 FETCH ACTIVE AVAILABLE COUPONS
+
   useEffect(() => {
     async function fetchCoupons() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/coupons`) // Reusing existing lookup endpoint
+        // CHANGED: Now hitting the public endpoint
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/active`) 
         const data = await res.json()
         if (data.success) {
-          // Filter to only display ones that are active and haven't structurally expired yet on client time
-          const active = (data.coupons || []).filter((c: any) => c.is_active && new Date() < new Date(c.expires_at))
-          setAvailableCoupons(active)
+          // The backend is already filtering for active/unexpired, but we can double check
+          setAvailableCoupons(data.coupons || [])
         }
       } catch (err) {
         console.error("Failed to load active coupons grid:", err)
