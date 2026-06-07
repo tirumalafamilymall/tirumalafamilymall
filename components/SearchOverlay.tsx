@@ -4,6 +4,7 @@ import { X, Search, Loader2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { searchProducts } from '@/lib/api';
 
 export default function SearchOverlay({ open, onClose }: any) {
   const [query, setQuery] = useState('')
@@ -13,30 +14,27 @@ export default function SearchOverlay({ open, onClose }: any) {
 
   // 🔥 DYNAMIC LIVE SEARCH: Fetches directly from your database
   useEffect(() => {
-    if (!query.trim() || query.length < 2) {
-      setResults([])
-      setLoading(false)
-      return
+  if (!query.trim() || query.length < 2) {
+    setResults([]);
+    setLoading(false);
+    return;
+  }
+
+  const delayDebounceFn = setTimeout(async () => {
+    setLoading(true);
+    try {
+      // 🔥 Use the existing library function!
+      const data = await searchProducts(query, 10);
+      setResults(data.products || []);
+    } catch (error) {
+      console.error("Search fetch failed", error);
+    } finally {
+      setLoading(false);
     }
+  }, 400);
 
-    const delayDebounceFn = setTimeout(async () => {
-      setLoading(true)
-      try {
-        // This hits your actual backend search route
-        const res = await fetch(`/api/products/search?q=${encodeURIComponent(query)}`)
-        const data = await res.json()
-        if (data.success) {
-          setResults(data.products || [])
-        }
-      } catch (error) {
-        console.error("Search fetch failed", error)
-      } finally {
-        setLoading(false)
-      }
-    }, 400) // 400ms delay to prevent database spam
-
-    return () => clearTimeout(delayDebounceFn)
-  }, [query])
+  return () => clearTimeout(delayDebounceFn);
+}, [query]);
 
   const handleSearch = () => {
     if (!query.trim()) return
