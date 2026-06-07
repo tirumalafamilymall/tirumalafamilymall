@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
 import { useCartStore } from '@/store'
 import { useRouter } from 'next/navigation'
-import { Loader2, ShieldCheck, AlertCircle, Info } from 'lucide-react'
+import { Loader2, ShieldCheck, AlertCircle, Info, Tag, CheckCircle2 } from 'lucide-react'
 import { createOrder, createPaymentOrder, verifyPayment } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
 
@@ -43,9 +43,15 @@ export default function CheckoutPage() {
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
-const [shippingCost, setShippingCost] = useState<number | null>(null)
+  const [shippingCost, setShippingCost] = useState<number | null>(null)
   const [estimatedDays, setEstimatedDays] = useState<number | null>(null) 
   const [isCheckingShipping, setIsCheckingShipping] = useState(false)
+
+  // 🔥 COUPON STATE
+  const [couponInput, setCouponInput] = useState('')
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, amount: number, percent: number } | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+  const [couponError, setCouponError] = useState('')
 
   useEffect(() => {
     const unsub = onAuthChange(user => {
@@ -61,7 +67,6 @@ const [shippingCost, setShippingCost] = useState<number | null>(null)
         setError(''); 
         
         try {
-          // Verify with the Shipping API
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/shipping/serviceability?pincode=${form.pincode}`);
           const data = await res.json();
           
@@ -71,9 +76,9 @@ const [shippingCost, setShippingCost] = useState<number | null>(null)
             return;
           }
           
-if (data.is_serviceable) {
+          if (data.is_serviceable) {
             setShippingCost(Number(data.shipping_cost));
-            setEstimatedDays(Number(data.estimated_days)); // 🔥 ADD THIS LINE
+            setEstimatedDays(Number(data.estimated_days));
             setError(''); 
           } else {
             setError("Sorry, we don't deliver to this pincode yet.");
@@ -91,6 +96,34 @@ if (data.is_serviceable) {
     checkShipping();
   }, [form.pincode]);
 
+  // 🔥 HANDLE COUPON APPLY
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    setCouponLoading(true)
+    setCouponError('')
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/validate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: couponInput, subtotal: Number(totalPrice()) })
+      })
+      const data = await res.json()
+      
+      if (!res.ok || data.error) {
+        setCouponError(data.error || 'Invalid coupon')
+        setAppliedCoupon(null)
+      } else {
+        setAppliedCoupon({ code: data.code, amount: data.discountAmount, percent: data.percent })
+        setCouponInput('')
+      }
+    } catch (e) {
+      setCouponError('Failed to apply coupon')
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value })
     setError('')
@@ -107,7 +140,6 @@ if (data.is_serviceable) {
       setError('Your cart is empty')
       return
     }
-
     if (shippingCost === null && !isCheckingShipping) {
       setError('Please enter a valid pincode to calculate shipping');
       return;
@@ -117,10 +149,26 @@ if (data.is_serviceable) {
     setLoading(true)
 
     try {
-      const { order } = await createOrder({
+      // 🔥 Note: Send the coupon code, but let backend do the final math!
+      const orderPayload: any = {
         shipping_address: { name, phone, address, city, state, pincode },
         shipping_amount: displayShipping, 
+      }
+      if (appliedCoupon) {
+        orderPayload.coupon_code = appliedCoupon.code;
+      }
+
+      // Need to adjust your createOrder logic in lib/api.ts to accept this payload if it has strict types,
+      // but standard JSON.stringify passes everything perfectly.
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('tfm_token')}` }, // Assuming local token auth, or whatever userFetch uses
+        body: JSON.stringify(orderPayload)
       })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || 'Failed to place order')
+      
+      const order = data.order
 
       const loaded = await loadRazorpay()
       if (!loaded) throw new Error('Failed to load payment gateway')
@@ -153,9 +201,7 @@ if (data.is_serviceable) {
               reject(new Error('Payment verification failed'))
             }
           },
-          modal: {
-            ondismiss: () => reject(new Error('Payment cancelled')),
-          },
+          modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
         })
         rzp.open()
       })
@@ -168,7 +214,9 @@ if (data.is_serviceable) {
   }
 
   const displayShipping = shippingCost !== null ? shippingCost : 0
-  const total = Number(totalPrice()) + displayShipping
+  const baseSubtotal = Number(totalPrice())
+  const finalDiscount = appliedCoupon ? appliedCoupon.amount : 0
+  const finalTotal = baseSubtotal - finalDiscount + displayShipping
 
   return (
     <div className="bg-[#fcfcfc] min-h-screen pb-20">
@@ -239,12 +287,67 @@ if (data.is_serviceable) {
             ))}
           </div>
 
+          {/* 🔥 PROMO CODE SECTION */}
+          <div className="border-t border-gray-100 pt-6 mb-6">
+            {!appliedCoupon ? (
+              <div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Tag size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Promo Code" 
+                      value={couponInput}
+                      onChange={e => {setCouponInput(e.target.value.toUpperCase()); setCouponError('')}}
+                      className="w-full border border-gray-200 py-3 pl-10 pr-4 rounded-xl text-sm focus:outline-none focus:border-black transition"
+                    />
+                  </div>
+                  <button 
+                    onClick={handleApplyCoupon}
+                    disabled={couponLoading || !couponInput.trim()}
+                    className="px-6 bg-black text-white rounded-xl text-[12px] font-bold tracking-widest uppercase disabled:opacity-50 hover:bg-[#CC0000] transition"
+                  >
+                    {couponLoading ? <Loader2 size={16} className="animate-spin" /> : 'Apply'}
+                  </button>
+                </div>
+                {couponError && <p className="text-red-500 text-[11px] mt-2 ml-1">{couponError}</p>}
+                
+                {/* 🔴 REQUESTED NOTE */}
+                <p className="text-[10px] text-gray-400 mt-2.5 ml-1 italic flex items-center gap-1.5">
+                  <Info size={10} /> Note: Use this coupon for eligible products.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={16} className="text-green-600" />
+                  <div>
+                    <p className="text-[13px] font-bold text-green-800 tracking-wide">{appliedCoupon.code}</p>
+                    <p className="text-[10px] text-green-700">{appliedCoupon.percent}% Off Applied!</p>
+                  </div>
+                </div>
+                <button onClick={() => setAppliedCoupon(null)} className="text-[11px] text-red-500 underline font-medium hover:text-red-700">
+                  Remove
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="border-t border-gray-100 pt-6 space-y-3 mb-8">
             <div className="flex justify-between text-[14px] text-gray-600">
               <span>Subtotal</span>
-              <span>₹{Number(totalPrice()).toLocaleString('en-IN')}</span>
+              <span>₹{baseSubtotal.toLocaleString('en-IN')}</span>
             </div>
-<div className="flex justify-between text-[14px]">
+            
+            {/* 🔥 SHOW DISCOUNT MATH */}
+            {appliedCoupon && (
+              <div className="flex justify-between text-[14px] font-medium text-green-600">
+                <span>Discount ({appliedCoupon.code})</span>
+                <span>-₹{finalDiscount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
+              </div>
+            )}
+
+            <div className="flex justify-between text-[14px]">
               <span className="text-gray-600 flex flex-col">
                 Shipping
                 {estimatedDays && (
@@ -259,7 +362,7 @@ if (data.is_serviceable) {
             </div>
             <div className="flex justify-between font-bold text-[20px] pt-4 border-t border-gray-100 text-black">
               <span>Total</span>
-              <span>₹{total.toLocaleString('en-IN')}</span>
+              <span>₹{finalTotal.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</span>
             </div>
           </div>
 
