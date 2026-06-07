@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import type { ChangeEvent } from 'react'
 import { useCartStore } from '@/store'
 import { useRouter } from 'next/navigation'
-import { Loader2, ShieldCheck, AlertCircle, Info, Tag, CheckCircle2 } from 'lucide-react'
+import { Loader2, ShieldCheck, AlertCircle, Info, Tag, CheckCircle2, Ticket } from 'lucide-react'
 import { createOrder, createPaymentOrder, verifyPayment } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
 
@@ -23,6 +23,16 @@ function loadRazorpay(): Promise<boolean> {
     script.onerror = () => resolve(false)
     document.body.appendChild(script)
   })
+}
+
+interface Coupon {
+  id: string
+  name: string
+  code: string
+  description?: string
+  discount_percent: number
+  min_order_value: number
+  expires_at: string
 }
 
 export default function CheckoutPage() {
@@ -47,17 +57,41 @@ export default function CheckoutPage() {
   const [estimatedDays, setEstimatedDays] = useState<number | null>(null) 
   const [isCheckingShipping, setIsCheckingShipping] = useState(false)
 
-  // 🔥 COUPON STATE
+  // ─── COUPON STATES ───
   const [couponInput, setCouponInput] = useState('')
   const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, amount: number, percent: number } | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState('')
+  
+  // 🔥 ACTIVE COUPONS FROM BACKEND
+  const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
+  const [loadingCoupons, setLoadingCoupons] = useState(true)
 
   useEffect(() => {
     const unsub = onAuthChange(user => {
       if (!user) router.replace('/account')
     })
     return () => unsub()
+  }, [])
+
+  // 🔥 FETCH ACTIVE AVAILABLE COUPONS
+  useEffect(() => {
+    async function fetchCoupons() {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/coupons`) // Reusing existing lookup endpoint
+        const data = await res.json()
+        if (data.success) {
+          // Filter to only display ones that are active and haven't structurally expired yet on client time
+          const active = (data.coupons || []).filter((c: any) => c.is_active && new Date() < new Date(c.expires_at))
+          setAvailableCoupons(active)
+        }
+      } catch (err) {
+        console.error("Failed to load active coupons grid:", err)
+      } finally {
+        setLoadingCoupons(false)
+      }
+    }
+    fetchCoupons()
   }, [])
 
   useEffect(() => {
@@ -96,17 +130,15 @@ export default function CheckoutPage() {
     checkShipping();
   }, [form.pincode]);
 
-  // 🔥 HANDLE COUPON APPLY
-  const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return
+  // ─── EXECUTE VALIDATE & SUBMIT FUNCTION ───
+  const runCouponValidation = async (targetCode: string) => {
     setCouponLoading(true)
     setCouponError('')
-    
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput, subtotal: Number(totalPrice()) })
+        body: JSON.stringify({ code: targetCode, subtotal: Number(totalPrice()) })
       })
       const data = await res.json()
       
@@ -122,6 +154,11 @@ export default function CheckoutPage() {
     } finally {
       setCouponLoading(false)
     }
+  }
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return
+    await runCouponValidation(couponInput)
   }
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -149,7 +186,6 @@ export default function CheckoutPage() {
     setLoading(true)
 
     try {
-      // 🔥 Note: Send the coupon code, but let backend do the final math!
       const orderPayload: any = {
         shipping_address: { name, phone, address, city, state, pincode },
         shipping_amount: displayShipping, 
@@ -158,11 +194,12 @@ export default function CheckoutPage() {
         orderPayload.coupon_code = appliedCoupon.code;
       }
 
-      // Need to adjust your createOrder logic in lib/api.ts to accept this payload if it has strict types,
-      // but standard JSON.stringify passes everything perfectly.
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('tfm_token')}` }, // Assuming local token auth, or whatever userFetch uses
+        headers: { 
+          'Content-Type': 'application/json', 
+          Authorization: `Bearer ${localStorage.getItem('tfm_token')}` 
+        },
         body: JSON.stringify(orderPayload)
       })
       const data = await res.json()
@@ -267,7 +304,7 @@ export default function CheckoutPage() {
         <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.04)] h-fit sticky top-28">
           <h3 className="heading-serif text-[22px] mb-8">Order Summary</h3>
 
-          <div className="space-y-6 max-h-[320px] overflow-y-auto pr-2 mb-8 custom-scrollbar">
+          <div className="space-y-6 max-h-[240px] overflow-y-auto pr-2 mb-8 custom-scrollbar">
             {items.map(item => (
               <div key={`${item.variantId}`} className="flex justify-between items-start text-[14px]">
                 <div className="flex gap-4">
@@ -287,7 +324,7 @@ export default function CheckoutPage() {
             ))}
           </div>
 
-          {/* 🔥 PROMO CODE SECTION */}
+          {/* ── PROMO CODE CONTAINER ── */}
           <div className="border-t border-gray-100 pt-6 mb-6">
             {!appliedCoupon ? (
               <div>
@@ -312,10 +349,51 @@ export default function CheckoutPage() {
                 </div>
                 {couponError && <p className="text-red-500 text-[11px] mt-2 ml-1">{couponError}</p>}
                 
-                {/* 🔴 REQUESTED NOTE */}
                 <p className="text-[10px] text-gray-400 mt-2.5 ml-1 italic flex items-center gap-1.5">
                   <Info size={10} /> Note: Use this coupon for eligible products.
                 </p>
+
+                {/* 🔥 DYNAMIC ACTIVE COUPONS DISPLAY ENGINE */}
+                {availableCoupons.length > 0 && (
+                  <div className="mt-5">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2 flex items-center gap-1.5">
+                      <Ticket size={12} className="text-gray-400" /> Available Offers
+                    </p>
+                    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                      {availableCoupons.map((coupon) => {
+                        const isEligible = baseSubtotal >= Number(coupon.min_order_value)
+                        return (
+                          <div 
+                            key={coupon.id} 
+                            onClick={() => isEligible && runCouponValidation(coupon.code)}
+                            className={`p-3 rounded-xl border text-left min-w-[200px] flex-shrink-0 transition-all cursor-pointer select-none ${
+                              isEligible 
+                                ? 'border-dashed border-gray-300 hover:border-black bg-gray-50/50' 
+                                : 'border-gray-100 bg-gray-50/30 opacity-60 cursor-not-allowed'
+                            }`}
+                          >
+                            <div className="flex justify-between items-start gap-1">
+                              <span className="text-[11px] font-bold uppercase tracking-wider bg-white border border-gray-200 px-2 py-0.5 rounded shadow-sm text-black">
+                                {coupon.code}
+                              </span>
+                              <span className="text-[11px] font-bold text-green-600 shrink-0">
+                                {Number(coupon.discount_percent)}% OFF
+                              </span>
+                            </div>
+                            <p className="text-[12px] font-semibold mt-2 text-gray-800 line-clamp-1">{coupon.name}</p>
+                            {isEligible ? (
+                              <p className="text-[10px] text-green-600 font-medium mt-1">Tap to apply code</p>
+                            ) : (
+                              <p className="text-[9.5px] text-red-500 font-medium mt-1">
+                                Add ₹{(Number(coupon.min_order_value) - baseSubtotal).toLocaleString('en-IN')} more to unlock
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="bg-green-50 border border-green-100 p-4 rounded-xl flex items-center justify-between">
@@ -339,7 +417,6 @@ export default function CheckoutPage() {
               <span>₹{baseSubtotal.toLocaleString('en-IN')}</span>
             </div>
             
-            {/* 🔥 SHOW DISCOUNT MATH */}
             {appliedCoupon && (
               <div className="flex justify-between text-[14px] font-medium text-green-600">
                 <span>Discount ({appliedCoupon.code})</span>
