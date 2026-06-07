@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { Loader2, ShieldCheck, AlertCircle, Info, Tag, CheckCircle2, Ticket } from 'lucide-react'
 import { createOrder, createPaymentOrder, verifyPayment } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
+import { getAuth } from "firebase/auth";
 
 declare global {
   interface Window {
@@ -182,28 +183,46 @@ export default function CheckoutPage() {
       return;
     }
 
-    setError('')
-    setLoading(true)
+setError('');
+  setLoading(true);
 
-    try {
-      const orderPayload: any = {
-        shipping_address: { name, phone, address, city, state, pincode },
-        shipping_amount: displayShipping, 
-      }
-      if (appliedCoupon) {
-        orderPayload.coupon_code = appliedCoupon.code;
-      }
+  try {
+    // 2. 🔥 GET FRESH TOKEN FROM FIREBASE
+    
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          Authorization: `Bearer ${localStorage.getItem('tfm_token')}` 
-        },
-        body: JSON.stringify(orderPayload)
-      })
-      const data = await res.json()
-      if (!data.success) throw new Error(data.error || 'Failed to place order')
+
+    // 3. 🔥 SEND FRESH TOKEN IN THE HEADER
+    const orderPayload: any = {
+      shipping_address: { name, phone, address, city, state, pincode },
+      shipping_amount: displayShipping, 
+    };
+    if (appliedCoupon) {
+      orderPayload.coupon_code = appliedCoupon.code;
+    }
+
+// ✅ THIS IS THE FIXED VERSION
+const auth = getAuth();
+const user = auth.currentUser;
+
+if (!user) {
+  setError("Please log in to complete your order.");
+  setLoading(false);
+  return;
+}
+
+const token = await user.getIdToken(true); // Force refresh of the token
+
+const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+  method: 'POST',
+  headers: { 
+    'Content-Type': 'application/json', 
+    'Authorization': `Bearer ${token}` // Use the fresh, valid token
+  },
+  body: JSON.stringify(orderPayload)
+});
+
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed to place order');
       
       const order = data.order
 
@@ -243,12 +262,12 @@ export default function CheckoutPage() {
         rzp.open()
       })
 
-    } catch (err: any) {
-      setError(err.message || 'Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+   } catch (err: any) {
+    setError(err.message || 'Something went wrong.');
+  } finally {
+    setLoading(false);
   }
+}
 
   const displayShipping = shippingCost !== null ? shippingCost : 0
   const baseSubtotal = Number(totalPrice())
