@@ -69,9 +69,8 @@ export function HeroSlider({ slides }: { slides: any[] }) {
   )
 }
 
-// ─── 2. SHOP BY CATEGORY (DYNAMIZED) ─────────────────────────────
+// ─── 2. SHOP BY CATEGORY (INFINITE CAROUSEL UPGRADE) ─────────────────────────────
 export function ShopByCategory({ categories }: { categories: any[] }) {
-  const [showAll, setShowAll] = useState(false)
   if (!categories || categories.length === 0) return null
 
   return (
@@ -82,33 +81,29 @@ export function ShopByCategory({ categories }: { categories: any[] }) {
           <div className="w-14 h-[3px] bg-[#CC0000] mt-4 mx-auto rounded-full"></div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
-          {categories.map((cat, i) => {
-            const isHiddenMobile = !showAll && i >= 4
-            return (
-              <div key={i} className={isHiddenMobile ? "hidden md:block" : "block"}>
-                <Link href={cat.href || '#'} className="group block">
-                  <div className="overflow-hidden rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.05)] group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition duration-300">
-                    <div className="relative">
-                      <img src={cat.img || 'https://via.placeholder.com/400x500'} alt={cat.name} className="w-full h-[180px] sm:h-[200px] object-cover group-hover:scale-[1.08] transition duration-500" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                      <div className="absolute bottom-0 left-0 right-0 text-white text-center py-3 bg-gradient-to-t from-[#cc0000]/90 via-[#cc0000]/70 to-transparent">
-                        <p className="text-[13px] font-semibold tracking-[0.06em]">{cat.name || 'Category'}</p>
-                        <p className="text-[11px] tracking-[0.2em] uppercase opacity-90">Shop Now →</p>
-                      </div>
-                    </div>
+        {/* Premium Horizontal Scroll Track */}
+        <div className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-6 hide-scroll-track">
+          {categories.map((cat, i) => (
+            <Link key={i} href={cat.href || '#'} className="group block shrink-0 snap-start w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px]">
+              <div className="overflow-hidden rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.05)] group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition duration-300">
+                <div className="relative">
+                  <img src={cat.img || 'https://via.placeholder.com/400x500'} alt={cat.name} className="w-full h-[180px] sm:h-[200px] lg:h-[240px] object-cover group-hover:scale-[1.08] transition duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 text-white text-center py-3 bg-gradient-to-t from-[#cc0000]/90 via-[#cc0000]/70 to-transparent">
+                    <p className="text-[13px] font-semibold tracking-[0.06em]">{cat.name || 'Category'}</p>
+                    <p className="text-[11px] tracking-[0.2em] uppercase opacity-90">Shop Now →</p>
                   </div>
-                </Link>
+                </div>
               </div>
-            )
-          })}
+            </Link>
+          ))}
         </div>
-        {!showAll && (
-          <div className="text-center mt-6 md:hidden">
-            <button onClick={() => setShowAll(true)} className="text-[12px] tracking-[0.2em] uppercase text-[#cc0000] font-medium">View More →</button>
-          </div>
-        )}
       </div>
+      {/* Hide ugly default browser scrollbars for a native app feel */}
+      <style>{`
+        .hide-scroll-track::-webkit-scrollbar { display: none; } 
+        .hide-scroll-track { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </section>
   )
 }

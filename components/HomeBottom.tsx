@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Instagram, Play, Loader2 } from 'lucide-react'
+import { Instagram, Play, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import ProductCard, { Product } from './ProductCard'
 import { getProducts, getInstaLivePosts } from '@/lib/api'
 
@@ -107,50 +107,67 @@ export function InstaLive() {
   )
 }
 
-// ─── 3. NEW SEASON PICKS ──────────────────────────────────────────
+// ─── 3. NEW SEASON PICKS (INFINITE CAROUSEL UPGRADE) ──────────────────────────────
 export function CategoryHighlight({ newSeasonConfig }: { newSeasonConfig: any[] }) {
-  if (!newSeasonConfig) return null
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // Smooth scroll logic for desktop arrows
+  const scroll = (dir: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = window.innerWidth < 768 ? 250 : 400
+      scrollRef.current.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' })
+    }
+  }
+
+  if (!newSeasonConfig || newSeasonConfig.length === 0) return null
+
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-white overflow-hidden">
       <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12">
+        
+        {/* Header & Desktop Navigation Arrows */}
         <div className="flex items-end justify-between mb-10">
           <div>
             <p className="text-[10px] tracking-[0.5em] uppercase text-gray-400 mb-3">Trending</p>
             <h2 className="heading-serif italic text-[30px] sm:text-[34px] md:text-[38px] lg:text-[44px]">New Season Picks</h2>
             <div className="w-12 h-[2px] bg-[#CC0000] mt-4 rounded-full"></div>
           </div>
-          <Link href="/collections/women" className="hidden sm:inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-[11px] tracking-[0.25em] uppercase font-medium border border-gray-300 text-gray-700 hover:border-[#CC0000] hover:text-[#CC0000] hover:shadow-md transition-all duration-300">View All →</Link>
+          
+          {/* Interactive Arrows (Visible on Desktop Only) */}
+          <div className="hidden sm:flex items-center gap-3">
+            <button onClick={() => scroll('left')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all">
+              <ChevronLeft size={18} />
+            </button>
+            <button onClick={() => scroll('right')} className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-black hover:text-white hover:border-black transition-all">
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Mobile View */}
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory sm:hidden pb-2">
+        {/* Unified Mobile Swipe & Desktop Slider Track */}
+        <div ref={scrollRef} className="flex gap-5 lg:gap-6 overflow-x-auto snap-x snap-mandatory hide-scroll-track pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
           {newSeasonConfig.map((item, i) => (
-            <Link key={i} href={item.href || '#'} className="snap-start shrink-0 w-[230px] relative rounded-[14px] overflow-hidden shadow-[0_10px_30px_rgba(0,0,0,0.08)]">
-              <div className="h-[190px]"><img src={item.img || 'https://via.placeholder.com/400'} alt={item.title} className="w-full h-full object-cover" /></div>
-              <div className="absolute inset-0 bg-black/25" />
-              <div className="absolute bottom-4 left-5">
-                <h3 className="text-[15px] font-medium text-white">{item.title || 'Collection'}</h3>
-                {item.desc && <p className="text-[11px] text-white/80">{item.desc}</p>}
+            <Link key={i} href={item.href || '#'} className="snap-start shrink-0 w-[240px] sm:w-[280px] lg:w-[320px] group relative overflow-hidden rounded-[16px] shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-all duration-300">
+              <div className="h-[280px] sm:h-[340px] lg:h-[400px]">
+                <img src={item.img || 'https://via.placeholder.com/500'} alt={item.title} className="w-full h-full object-cover group-hover:scale-[1.05] transition duration-700" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent group-hover:from-black/80 transition duration-300" />
+              <div className="absolute bottom-6 left-6 right-6">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-white/70 mb-1 font-semibold">{item.desc || 'Explore'}</p>
+                <h3 className="text-[18px] lg:text-[20px] font-medium text-white mb-3">{item.title || 'Collection'}</h3>
+                <div className="inline-block border-b border-white/50 text-white text-[11px] tracking-[0.15em] uppercase pb-1 group-hover:border-[#CC0000] group-hover:text-[#CC0000] transition-colors">
+                  Shop Now →
+                </div>
               </div>
             </Link>
           ))}
         </div>
 
-        {/* Desktop View */}
-        <div className="hidden sm:grid gap-5" style={{ gridTemplateColumns: '1fr 1fr 1fr', gridTemplateRows: '200px 200px' }}>
-          {newSeasonConfig.map((item, i) => (
-            <Link key={i} href={item.href || '#'} className={`group relative overflow-hidden rounded-[14px] shadow-[0_10px_30px_rgba(0,0,0,0.06)] hover:shadow-[0_20px_60px_rgba(0,0,0,0.12)] transition-all duration-300 ${i === 0 ? 'row-span-2' : ''}`}>
-              <img src={item.img || 'https://via.placeholder.com/500'} alt={item.title} className="w-full h-full object-cover group-hover:scale-[1.05] transition duration-700" />
-              <div className="absolute inset-0 bg-black/25 group-hover:bg-black/35 transition" />
-              <div className="absolute bottom-5 left-6">
-                <h3 className="text-[17px] font-medium text-white">{item.title || 'Picks'}</h3>
-                {item.desc && <p className="text-[12px] text-white/80 mt-1">{item.desc}</p>}
-              </div>
-            </Link>
-          ))}
-        </div>
       </div>
-      <style>{`.overflow-x-auto::-webkit-scrollbar { display: none; }`}</style>
+      <style>{`
+        .hide-scroll-track::-webkit-scrollbar { display: none; } 
+        .hide-scroll-track { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </section>
   )
 }
