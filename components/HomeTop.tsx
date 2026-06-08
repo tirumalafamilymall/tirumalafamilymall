@@ -5,7 +5,8 @@ import Link from 'next/link'
 import ProductCard, { Product } from './ProductCard'
 import { getProducts } from '@/lib/api'
 import { Loader2 } from 'lucide-react'
-
+import { useRef } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 // Safe helper mapping backend product models to the UI ProductCard structure
 function toCardProduct(p: any): Product {
   const variants = p.variants || []
@@ -69,20 +70,38 @@ export function HeroSlider({ slides }: { slides: any[] }) {
   )
 }
 
-// ─── 2. SHOP BY CATEGORY (INFINITE CAROUSEL UPGRADE) ─────────────────────────────
+
 export function ShopByCategory({ categories }: { categories: any[] }) {
   if (!categories || categories.length === 0) return null
+  
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { current } = scrollRef
+      const scrollAmount = 300 // Adjust based on item width
+      current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' })
+    }
+  }
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-white relative">
       <div className="max-w-[1400px] mx-auto px-4 lg:px-10">
-        <div className="mb-10 text-center">
-          <h2 className="heading-serif italic text-[30px] sm:text-[34px] md:text-[38px] lg:text-[44px]">Shop by Category</h2>
-          <div className="w-14 h-[3px] bg-[#CC0000] mt-4 mx-auto rounded-full"></div>
+        <div className="mb-10 flex justify-between items-center">
+          <div className="flex-1 text-center lg:text-left">
+            <h2 className="heading-serif italic text-[30px] sm:text-[44px]">Shop by Category</h2>
+            <div className="w-14 h-[3px] bg-[#CC0000] mt-4 rounded-full mx-auto lg:mx-0"></div>
+          </div>
+          
+          {/* Controls */}
+          <div className="hidden lg:flex gap-2">
+            <button onClick={() => scroll('left')} className="p-2 bg-gray-100 hover:bg-black hover:text-white rounded-full transition"><ChevronLeft size={20}/></button>
+            <button onClick={() => scroll('right')} className="p-2 bg-gray-100 hover:bg-black hover:text-white rounded-full transition"><ChevronRight size={20}/></button>
+          </div>
         </div>
 
-        {/* Premium Horizontal Scroll Track */}
-        <div className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-6 hide-scroll-track">
+        {/* Scrollable Track */}
+        <div ref={scrollRef} className="flex gap-4 sm:gap-5 overflow-x-auto snap-x snap-mandatory pb-6 hide-scroll-track scroll-smooth">
           {categories.map((cat, i) => (
             <Link key={i} href={cat.href || '#'} className="group block shrink-0 snap-start w-[140px] sm:w-[160px] md:w-[180px] lg:w-[200px]">
               <div className="overflow-hidden rounded-xl shadow-[0_8px_25px_rgba(0,0,0,0.05)] group-hover:shadow-[0_20px_60px_rgba(0,0,0,0.15)] transition duration-300">
@@ -99,9 +118,9 @@ export function ShopByCategory({ categories }: { categories: any[] }) {
           ))}
         </div>
       </div>
-      {/* Hide ugly default browser scrollbars for a native app feel */}
-      <style>{`
-        .hide-scroll-track::-webkit-scrollbar { display: none; } 
+
+      <style jsx global>{`
+        .hide-scroll-track::-webkit-scrollbar { display: none; }
         .hide-scroll-track { -ms-overflow-style: none; scrollbar-width: none; }
       `}</style>
     </section>
