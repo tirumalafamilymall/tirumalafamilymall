@@ -60,7 +60,7 @@ export default function CheckoutPage() {
 
   // ─── COUPON STATES ───
   const [couponInput, setCouponInput] = useState('')
-  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string, amount: number, percent: number } | null>(null)
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string, code: string, amount: number, percent: number } | null>(null)
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState('')
   
@@ -132,14 +132,29 @@ export default function CheckoutPage() {
   }, [form.pincode]);
 
   // ─── EXECUTE VALIDATE & SUBMIT FUNCTION ───
-  const runCouponValidation = async (targetCode: string) => {
+const runCouponValidation = async (targetCode: string) => {
     setCouponLoading(true)
     setCouponError('')
     try {
+      // 1. Get the Firebase User
+      const auth = getAuth();
+      const user = auth.currentUser;
+      
+      if (!user) {
+         setCouponError("Please log in to apply coupons.");
+         setCouponLoading(false);
+         return;
+      }
+
+      // 2. Send the firebaseUid to the backend
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/validate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: targetCode, subtotal: Number(totalPrice()) })
+        body: JSON.stringify({ 
+          code: targetCode, 
+          subtotal: Number(totalPrice()),
+          firebaseUid: user.uid 
+        })
       })
       const data = await res.json()
       
@@ -147,7 +162,13 @@ export default function CheckoutPage() {
         setCouponError(data.error || 'Invalid coupon')
         setAppliedCoupon(null)
       } else {
-        setAppliedCoupon({ code: data.code, amount: data.discountAmount, percent: data.percent })
+        // 3. Save the coupon_id so we can attach it to the final order!
+        setAppliedCoupon({ 
+          id: data.coupon_id, 
+          code: data.code, 
+          amount: data.discountAmount, 
+          percent: data.percent 
+        })
         setCouponInput('')
       }
     } catch (e) {
@@ -191,13 +212,15 @@ setError('');
     
 
 
-    // 3. 🔥 SEND FRESH TOKEN IN THE HEADER
-    const orderPayload: any = {
+const orderPayload: any = {
       shipping_address: { name, phone, address, city, state, pincode },
       shipping_amount: displayShipping, 
     };
+    
+    // 🔥 This is the most important part!
     if (appliedCoupon) {
       orderPayload.coupon_code = appliedCoupon.code;
+      orderPayload.coupon_id = appliedCoupon.id; // It must send the ID!
     }
 
 // ✅ THIS IS THE FIXED VERSION
