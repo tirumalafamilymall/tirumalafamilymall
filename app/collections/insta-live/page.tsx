@@ -7,9 +7,13 @@ import { getInstaLivePosts, getProducts } from '@/lib/api'
 
 // 🔥 BULLETPROOF PARSER: Will find the image no matter how the database formats it
 function toCardProduct(p: any): Product {
-  const variants = p.variants || []
+  // 🔥 THE FIX: Ignore inactive variants for stock totals and card rendering calculations
+  const variants = (p.variants || []).filter((v: any) => v.is_active !== false)
+  
   const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
   const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || p.price || 0)
+  
+  // ... rest of your existing code remains exactly the same
   
   // 1. Try to get the main image safely
   let mainImage = null;

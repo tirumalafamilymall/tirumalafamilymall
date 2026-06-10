@@ -76,7 +76,8 @@ export default function ProductPage() {
     loadData()
   }, [productId])
 
-  const variants = product?.variants || []
+
+  const variants = (product?.variants || []).filter((v: any) => v.is_active !== false)
   const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
 
   const availableSizes = variants

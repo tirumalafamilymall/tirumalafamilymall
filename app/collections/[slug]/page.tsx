@@ -21,12 +21,16 @@ const PRICE_RANGES = [
 ]
 
 // Enhanced database payload parser extracting multi-type images securely
+// Enhanced database payload parser extracting multi-type images securely
 function toCardProduct(p: any): Product {
-  const variants = p.variants || []
+  // 🔥 THE FIX: Filter out inactive variants before evaluating aggregate stock or price badges
+  const variants = (p.variants || []).filter((v: any) => v.is_active !== false)
+  
   const stock = p.stock !== undefined ? p.stock : variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0)
   const price = p.base_price !== undefined ? p.base_price : (variants[0]?.base_price || 0)
   
   let mainImage = null;
+  // ... rest of your existing code remains exactly the same
   if (Array.isArray(p.images) && p.images.length > 0 && p.images[0]) {
     mainImage = p.images[0];
   } else if (typeof p.images === 'string' && p.images.length > 5) {
