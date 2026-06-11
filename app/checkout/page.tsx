@@ -5,7 +5,7 @@ import type { ChangeEvent } from 'react'
 import { useCartStore } from '@/store'
 import { useRouter } from 'next/navigation'
 import { Loader2, ShieldCheck, AlertCircle, Info, Tag, CheckCircle2, Ticket } from 'lucide-react'
-import { createOrder, createPaymentOrder, verifyPayment } from '@/lib/api'
+import { createPaymentOrder, verifyPayment } from '@/lib/api'
 import { onAuthChange } from '@/lib/auth'
 import { getAuth } from "firebase/auth";
 
@@ -68,22 +68,19 @@ export default function CheckoutPage() {
   const [availableCoupons, setAvailableCoupons] = useState<Coupon[]>([])
   const [loadingCoupons, setLoadingCoupons] = useState(true)
 
-  useEffect(() => {
-    const unsub = onAuthChange(user => {
-      if (!user) router.replace('/account')
-    })
-    return () => unsub()
-  }, [])
-
-
-  useEffect(() => {
-    async function fetchCoupons() {
+useEffect(() => {
+    // We wait for Firebase to confirm the user is logged in
+    const unsub = onAuthChange(async (user) => {
+      if (!user) {
+        router.replace('/account')
+        return
+      }
+      
+      // 🔥 Now that we definitely have the user, fetch THEIR specific coupons
       try {
-        // CHANGED: Now hitting the public endpoint
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/active`) 
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/coupons/active?uid=${user.uid}`) 
         const data = await res.json()
         if (data.success) {
-          // The backend is already filtering for active/unexpired, but we can double check
           setAvailableCoupons(data.coupons || [])
         }
       } catch (err) {
@@ -91,9 +88,11 @@ export default function CheckoutPage() {
       } finally {
         setLoadingCoupons(false)
       }
-    }
-    fetchCoupons()
+    })
+    
+    return () => unsub()
   }, [])
+
 
   useEffect(() => {
     async function checkShipping() {
@@ -207,42 +206,37 @@ const runCouponValidation = async (targetCode: string) => {
 setError('');
   setLoading(true);
 
-  try {
-    // 2. 🔥 GET FRESH TOKEN FROM FIREBASE
-    
+try {
+  const auth = getAuth()
+  const user = auth.currentUser
 
+  if (!user) {
+    setError("Please log in to complete your order.")
+    setLoading(false)
+    return
+  }
 
-const orderPayload: any = {
-      shipping_address: { name, phone, address, city, state, pincode },
-      shipping_amount: displayShipping, 
-    };
-    
-    // 🔥 This is the most important part!
-    if (appliedCoupon) {
-      orderPayload.coupon_code = appliedCoupon.code;
-      orderPayload.coupon_id = appliedCoupon.id; // It must send the ID!
-    }
+  const token = await user.getIdToken(true)
 
-// ✅ THIS IS THE FIXED VERSION
-const auth = getAuth();
-const user = auth.currentUser;
+  const orderPayload: any = {
+    shipping_address: { name, phone, address, city, state, pincode },
+    shipping_amount: displayShipping,
+  }
 
-if (!user) {
-  setError("Please log in to complete your order.");
-  setLoading(false);
-  return;
-}
+  if (appliedCoupon) {
+    orderPayload.coupon_code = appliedCoupon.code
+    orderPayload.coupon_id = appliedCoupon.id
+  }
 
-const token = await user.getIdToken(true); // Force refresh of the token
-
-const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
-  method: 'POST',
-  headers: { 
-    'Content-Type': 'application/json', 
-    'Authorization': `Bearer ${token}` // Use the fresh, valid token
-  },
-  body: JSON.stringify(orderPayload)
-});
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/orders`, {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json', 
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify(orderPayload)
+  })
+  // ... rest stays the same
 
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Failed to place order');
