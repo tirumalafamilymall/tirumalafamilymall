@@ -203,9 +203,6 @@ export default function Header() {
 
             {/* SMALL LINKS */}
             <div className="flex flex-col gap-3">
-              <Link href="/about" className="text-[14px] text-gray-500 hover:text-black transition">
-                About Us
-              </Link>
 
               <Link href="/contact" className="text-[14px] text-gray-500 hover:text-black transition">
                 Contact

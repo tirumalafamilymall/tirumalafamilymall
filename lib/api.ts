@@ -188,6 +188,7 @@ export const createOrder = (data: {
   }
   notes?: string
   shipping_amount: number 
+  coupon_code?: string 
 }) =>
   userFetch('/api/orders', {
     method: 'POST',

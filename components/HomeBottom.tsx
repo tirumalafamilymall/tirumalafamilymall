@@ -66,15 +66,12 @@ export function InstaLive() {
         const res = await getProducts({ sales_channel: 'INSTA_LIVE', limit: 8 })
         setProducts((res.products || []).map(toCardProduct))
       } catch (e) { console.error(e) }
-      setUploading(false)
+      setLoading(false)
     }
     fetchLiveItems()
   }, [])
 
-  function setUploading(arg0: boolean) {
-    setLoading(arg0)
-  }
-
+  
   return (
     <section className="py-16 bg-white">
       <div className="w-full max-w-[1400px] mx-auto px-6 lg:px-12">

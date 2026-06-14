@@ -78,12 +78,12 @@ export default function ProductPage() {
 
 
   const variants = (product?.variants || []).filter((v: any) => v.is_active !== false)
-  const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter(Boolean))) as string[]
+const availableColors = Array.from(new Set(variants.map((v: any) => v.color).filter((c: any) => c && c.trim() !== ''))) as string[]
 
   const availableSizes = variants
     .filter((v: any) => !selectedColor || v.color === selectedColor)
     .map((v: any) => v.size)
-    .filter(Boolean)
+    .filter((s: any) => s && s.trim() !== '')
     .filter((val: any, idx: any, self: any) => self.indexOf(val) === idx)
 
   useEffect(() => {
@@ -134,7 +134,7 @@ export default function ProductPage() {
   const displayPrice = activeVariant ? Number(activeVariant.base_price) : (variants[0] ? Number(variants[0].base_price) : 0)
 
   const parentImages = product?.images || []
-  const variantImages = variants.map((v: any) => v.image).filter(Boolean)
+  const variantImages = variants.map((v: any) => v.image).filter((s: any) => s && s.trim() !== '')
   const allImages = Array.from(new Set([...parentImages, ...variantImages])) 
   const displayImage = variantImageOverride || allImages[0] || 'https://placehold.co/800x1000?text=No+Image'
 
@@ -266,11 +266,11 @@ export default function ProductPage() {
                       return (
                         <button key={c} onClick={() => setSelectedColor(c)}
                           className={`relative w-12 h-12 rounded-full border transition overflow-hidden ${selectedColor === c ? 'border-black ring-2 ring-black/20' : 'border-gray-300 hover:border-black'}`}>
-                          {vImg ? (
-                            <img src={vImg} className="w-full h-full object-cover" alt={c} />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[10px]">{c[0]}</div>
-                          )}
+{vImg ? (
+  <img src={vImg} className="w-full h-full object-cover" alt={c} />
+) : (
+  <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[9px] font-medium text-gray-600 text-center px-1 leading-tight">{c}</div>
+)}
                         </button>
                       )
                     })}
@@ -285,10 +285,10 @@ export default function ProductPage() {
                   </div>
                   <div className="flex gap-3 flex-wrap">
                     {availableSizes.map((s: string) => (
-                      <button key={s} onClick={() => setSelectedSize(s)}
-                        className={`w-[44px] h-[44px] rounded-full border transition text-sm ${selectedSize === s ? 'bg-black text-white border-black' : 'border-gray-300 hover:border-black hover:bg-black hover:text-white'}`}>
-                        {s}
-                      </button>
+<button key={s} onClick={() => setSelectedSize(s)}
+className={`min-w-[44px] h-[44px] px-3 rounded-full border transition text-sm ${selectedSize === s ? 'bg-black text-white border-black' : 'border-gray-300 hover:border-black hover:bg-black hover:text-white'}`}>
+  {s}
+</button>
                     ))}
                   </div>
                 </div>

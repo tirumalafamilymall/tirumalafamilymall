@@ -120,6 +120,7 @@ export const useCartStore = create<CartStore>()(
     {
       name: 'tfm-cart',
       partialize: (state) => ({ items: state.items }), 
+      skipHydration: true,
     }
   )
 )
@@ -177,6 +178,7 @@ export const useWishlistStore = create<WishlistStore>()(
     { 
       name: 'tfm-wishlist',
       partialize: (state) => ({ items: state.items }),
+      skipHydration: true,
     }
   )
 )
@@ -184,6 +186,7 @@ export const useWishlistStore = create<WishlistStore>()(
 /* ─────────────────────────────────────────
    INITIALIZATION LOGIC
 ───────────────────────────────────────── */
+// Change this:
 if (typeof window !== 'undefined') {
   useCartStore.getState().syncCart()
   useWishlistStore.getState().syncWishlist()
