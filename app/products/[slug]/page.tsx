@@ -262,7 +262,8 @@ const availableColors = Array.from(new Set(variants.map((v: any) => v.color).fil
                   <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3">Color: {selectedColor || 'Select'}</p>
                   <div className="flex gap-3 flex-wrap">
                     {availableColors.map((c: string) => {
-                      const vImg = variants.find((v: any) => v.color === c && v.image)?.image;
+const allVariants = product?.variants || []
+const vImg = allVariants.find((v: any) => v.color === c && v.image && v.image.trim() !== '')?.image;
                       return (
                         <button key={c} onClick={() => setSelectedColor(c)}
                           className={`relative w-12 h-12 rounded-full border transition overflow-hidden ${selectedColor === c ? 'border-black ring-2 ring-black/20' : 'border-gray-300 hover:border-black'}`}>
