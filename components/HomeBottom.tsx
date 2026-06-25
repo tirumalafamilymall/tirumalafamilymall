@@ -210,7 +210,7 @@ export function PremiumReels() {
                onMouseEnter={() => handleMouseEnter(i)} onMouseLeave={() => handleMouseLeave(i)}>
               <div className="relative aspect-[9/16] rounded-2xl overflow-hidden bg-black shadow-[0_20px_60px_rgba(0,0,0,0.12)] group-hover:shadow-[0_40px_120px_rgba(0,0,0,0.25)] transition-all duration-500">
                 {reel.thumbnail?.includes('.mp4') ? (
-                  <video ref={el => { videoRefs.current[i] = el }} src={reel.thumbnail} muted loop playsInline className="w-full h-full object-cover transition duration-700 group-hover:scale-[1.05]" />
+                  <video ref={el => { videoRefs.current[i] = el }} src={reel.thumbnail} autoPlay muted loop playsInline className="w-full h-full object-cover transition duration-700 group-hover:scale-[1.05]" />
                 ) : (
                   <img src={reel.thumbnail} className="w-full h-full object-cover transition duration-700 group-hover:scale-[1.05]" />
                 )}
@@ -234,7 +234,7 @@ export function PremiumReels() {
             <a key={reel.id} href={reel.instagram_url} target="_blank" rel="noopener noreferrer" className="min-w-[160px] group relative snap-center">
               <div className="relative aspect-[9/16] rounded-xl overflow-hidden bg-black shadow-md">
                 {reel.thumbnail?.includes('.mp4') ? (
-                  <video src={reel.thumbnail} autoPlay muted loop playsInline className="w-full h-full object-cover" />
+                 <video src={reel.thumbnail} autoPlay muted loop playsInline className="w-full h-full object-cover" />
                 ) : (
                   <img src={reel.thumbnail} className="w-full h-full object-cover" />
                 )}
