@@ -268,7 +268,7 @@ const vImg = allVariants.find((v: any) => v.color === c && v.image && v.image.tr
                         <button key={c} onClick={() => setSelectedColor(c)}
                           className={`relative w-12 h-12 rounded-full border transition overflow-hidden ${selectedColor === c ? 'border-black ring-2 ring-black/20' : 'border-gray-300 hover:border-black'}`}>
 {vImg ? (
-  <img src={vImg} className="w-full h-full object-cover" alt={c} />
+  <img src={vImg} className="w-full h-full object-cover" alt={c} loading="lazy" />
 ) : (
   <div className="w-full h-full flex items-center justify-center bg-gray-100 text-[9px] font-medium text-gray-600 text-center px-1 leading-tight">{c}</div>
 )}
