@@ -257,8 +257,6 @@ const availableColors = Array.from(new Set(variants.map((v: any) => v.color).fil
                 <span className="text-[28px] font-semibold text-black">₹{displayPrice.toLocaleString('en-IN')}</span>
               </div>
 
-// Inside your return() JSX, replace the availableColors section with this:
-
 {availableColors.length > 0 && (
   <div className="mt-6">
     <p className="text-[11px] tracking-[0.18em] uppercase text-gray-500 mb-3">Color: {selectedColor || 'Select'}</p>
